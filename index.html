@@ -226,6 +226,16 @@ body.preview .finding,body.preview .roof,body.preview .card{box-shadow:none}
 .cloud-wide{width:100%;margin-bottom:8px}
 .cloud-or{font-size:12px;color:var(--ink3);text-align:center;margin:12px 0 8px}
 .cloud-email{margin-bottom:8px}
+/* ---------- autocomplete + findings catalog ---------- */
+.ac-drop{position:absolute;z-index:300;background:#fff;border:1px solid var(--hairline-2);border-radius:11px;box-shadow:var(--sh-3);max-height:280px;overflow:auto;max-width:92vw;min-width:200px}
+.ac-drop[hidden]{display:none!important}
+.ac-head{font-size:10.5px;font-weight:800;color:var(--amber);padding:7px 11px 3px;letter-spacing:.3px}
+.ac-item{padding:8px 11px;cursor:pointer;border-bottom:1px solid var(--hairline)}
+.ac-item:last-child{border-bottom:none}
+.ac-item:hover,.ac-item.sel{background:var(--amber-l)}
+.ac-main{font-size:13.5px;font-weight:700;color:var(--ink)}
+.ac-sub{font-size:11px;color:var(--ink3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#catSearch{width:100%}
 </style>
 </head>
 <body>
@@ -304,6 +314,16 @@ body.preview .finding,body.preview .roof,body.preview .card{box-shadow:none}
   <div class="lib-modal">
     <div class="lib-head"><div class="sk-title">הדוחות שלי</div><button class="btn primary" id="libNew">+ דוח חדש</button><button class="btn ghost" id="libClose">סגור</button></div>
     <div id="libList" class="lib-list"></div>
+  </div>
+</div>
+
+<div class="ac-drop no-print" id="acDrop" hidden></div>
+
+<div class="modal-overlay no-print" id="catModal">
+  <div class="lib-modal">
+    <div class="lib-head"><div class="sk-title">קטלוג ממצאים</div><button class="btn ghost" id="catClose">סגור</button></div>
+    <input id="catSearch" class="ed" placeholder="חפש ממצא… (מפגש קיר / מרזב / חלודה / ברגים…)">
+    <div id="catList" class="lib-list" style="margin-top:10px"></div>
   </div>
 </div>
 
@@ -529,7 +549,7 @@ function save(){ try{
     const m=docMeta(_activeId,state); const i=lib.reports.findIndex(r=>r.id===_activeId);
     if(i>=0){ m.createdAt=lib.reports[i].createdAt||Date.now(); m.cloudAt=lib.reports[i].cloudAt; lib.reports[i]=m; }
     else { m.createdAt=Date.now(); lib.reports.unshift(m); }
-    saveLib(lib); setStat('נשמר'); scheduleCloudPush();
+    saveLib(lib); setStat('נשמר'); scheduleCloudPush(); scheduleCatalog();
   }catch(e){ setStat('שגיאת שמירה'); } }
 function setStat(t){ const e=document.getElementById('savestat'); if(e)e.textContent=t; }
 function ensureShape(){ if(!state.meta)state.meta={}; if(!state.roofs)state.roofs=[];
@@ -607,8 +627,6 @@ function renderFinding(roof, f, n){
 
 function renderRoof(roof){
   const i=roofIdx(roof.id);
-  let kb='<option value="">— בחר פרט להוספה מהירה —</option><option value="blank">ממצא ריק</option>';
-  DETAILS.forEach(d=>kb+=`<option value="${d.k}">${esc(d.name)}</option>`);
   let findings=''; roof.findings.forEach((f,idx)=>findings+=renderFinding(roof,f,idx+1));
   return `<div class="roof">
     <div class="roof-head">
@@ -637,8 +655,8 @@ function renderRoof(roof){
       <div class="subh" style="margin-top:16px">ממצאים והמלצות</div>
       ${findings||'<div class="hint">אין ממצאים עדיין — הוסף ממצא מהרשימה למטה.</div>'}
       <div class="addbar edit-only">
-        <select class="ed kbpick" id="kb_${roof.id}">${kb}</select>
-        <button class="mini" data-action="addFinding" data-roof="${roof.id}">+ הוסף ממצא</button>
+        <button class="mini" data-action="openCatalog" data-roof="${roof.id}">+ ממצא מהקטלוג</button>
+        <button class="mini" data-action="addBlankFinding" data-roof="${roof.id}">+ ממצא ריק</button>
       </div>
     </div>
   </div>`;
@@ -797,7 +815,8 @@ doc.addEventListener('input',e=>{
     const ph=findPhotoByKey(el.dataset.key); if(ph){ph.caption=el.innerText;} scheduleSave(); return;
   }
   if(el.dataset.path && el.isContentEditable){ setPath(state,el.dataset.path,el.innerText); scheduleSave();
-    if(/^meta\.(refNo|consultantEmail|consultantPhone)$/.test(el.dataset.path))updateFooter(); }
+    if(/^meta\.(refNo|consultantEmail|consultantPhone)$/.test(el.dataset.path))updateFooter();
+    acInput(el); }
 });
 doc.addEventListener('change',e=>{
   const tog=e.target.closest('[data-sectoggle]');
@@ -814,7 +833,8 @@ doc.addEventListener('click',e=>{
   const a=b.dataset.action;
   if(a==='addRoof'){ const r=seedRoof('גג חדש',false); state.roofs.push(r); save(); render(); }
   else if(a==='delRoof'){ if(confirm('למחוק את הגג וכל הממצאים שבו?')){ const r=findRoof(b.dataset.roof); purgeRoofPhotos(r); state.roofs=state.roofs.filter(x=>x.id!==b.dataset.roof); save(); render(); } }
-  else if(a==='addFinding'){ const sel=document.getElementById('kb_'+b.dataset.roof); addFinding(b.dataset.roof, sel?sel.value:'blank'); }
+  else if(a==='addBlankFinding'){ addFinding(b.dataset.roof,'blank'); }
+  else if(a==='openCatalog'){ openCatalog(b.dataset.roof); }
   else if(a==='delFinding'){ if(confirm('למחוק ממצא זה?')){ const r=findRoof(b.dataset.roof); const f=findFinding(r,b.dataset.finding); if(f)f.photos.forEach(p=>removePhoto(p.key)); r.findings=r.findings.filter(x=>x.id!==b.dataset.finding); save(); render(); } }
   else if(a==='addRoofPhoto'){ _photoTarget={type:'roof',roof:b.dataset.roof}; pickPhotos(); }
   else if(a==='addFindingPhoto'){ _photoTarget={type:'finding',roof:b.dataset.roof,finding:b.dataset.finding}; pickPhotos(); }
@@ -971,6 +991,18 @@ document.getElementById('cloudGoogle').onclick=cloudSignInGoogle;
 document.getElementById('cloudEmailBtn').onclick=cloudSignInEmail;
 document.getElementById('cloudSyncNow').onclick=cloudFullSync;
 document.getElementById('cloudOut').onclick=cloudSignOut;
+/* autocomplete + catalog */
+document.getElementById('acDrop').addEventListener('mousedown',e=>{ const it=e.target.closest('.ac-item'); if(!it)return; e.preventDefault();
+  const entry=_ac.items[+it.dataset.idx]; if(entry)applyAC(entry,_ac.ri,_ac.fi,_ac.field); });
+document.getElementById('catClose').onclick=closeCatalog;
+document.getElementById('catSearch').oninput=e=>renderCatalog(e.target.value);
+document.getElementById('catModal').addEventListener('click',e=>{ if(e.target.id==='catModal'){ closeCatalog(); return; }
+  const c=e.target.closest('[data-catadd]'); if(!c)return; const entry=_catItems[+c.dataset.catadd]; if(entry)addFindingFromEntry(_catRoof,entry); });
+document.addEventListener('click',e=>{ if(!e.target.closest('#acDrop') && !e.target.closest('.ed'))hideAC(); });
+document.addEventListener('keydown',e=>{ const d=document.getElementById('acDrop'); if(!d||d.hidden){ if(e.key==='Escape')hideAC(); return; }
+  if(e.key==='Escape'){ hideAC(); }
+  else if(e.key==='ArrowDown'||e.key==='ArrowUp'){ e.preventDefault(); _ac.sel+=(e.key==='ArrowDown'?1:-1); _ac.sel=Math.max(0,Math.min(_ac.items.length-1,_ac.sel)); highlightAC(); }
+  else if(e.key==='Enter'&&_ac.sel>=0){ e.preventDefault(); const entry=_ac.items[_ac.sel]; if(entry)applyAC(entry,_ac.ri,_ac.fi,_ac.field); } });
 
 function blobToDataURL(b){return new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.readAsDataURL(b);});}
 function dataURLToBlob(d){return fetch(d).then(r=>r.blob());}
@@ -1088,6 +1120,73 @@ async function skSave(){
   _lastOut=null; closeSketch(); save(); render();
 }
 
+/* ============================================================ findings catalog + autocomplete */
+function norm(s){ return (s||'').trim().toLowerCase().replace(/\s+/g,' '); }
+function getCatalog(){ try{ return JSON.parse(localStorage.getItem('obCatalog')||'[]')||[]; }catch(e){ return []; } }
+function saveCatalog(c){ try{ localStorage.setItem('obCatalog', JSON.stringify(c)); }catch(e){} }
+function kbAsEntries(){ return DETAILS.map(d=>({ element:d.name, location:'', description:'', cause:d.fails, standardRef:'ת״י 1556', severity:'major', recommendation:d.rec, urgency:'', uses:0, kb:true })); }
+function mergedCatalog(){ const learned=getCatalog(); const have=new Set(learned.map(e=>norm(e.element)));
+  return learned.concat(kbAsEntries().filter(e=>!have.has(norm(e.element)))); }
+function catalogUpsertFinding(f){
+  if(!f||f.demo)return; const el=(f.element||'').trim(); if(!el)return;
+  const desc=(f.description||'').trim(), rec=(f.recommendation||'').trim(); if(!desc&&!rec)return;
+  const cat=getCatalog(); const key=norm(el); const i=cat.findIndex(e=>norm(e.element)===key);
+  const entry={ element:el, location:f.location||'', description:desc, cause:f.cause||'', standardRef:f.standardRef||'', severity:f.severity||'major', recommendation:rec, urgency:f.urgency||'', ts:Date.now(), uses:(i>=0?(cat[i].uses||0):0) };
+  if(i>=0)cat[i]=entry; else cat.unshift(entry);
+  if(cat.length>400)cat.length=400; saveCatalog(cat);
+}
+let _catT=null;
+function scheduleCatalog(){ clearTimeout(_catT); _catT=setTimeout(()=>{ try{ (state.roofs||[]).forEach(r=>(r.findings||[]).forEach(catalogUpsertFinding)); }catch(e){} try{ if(typeof catalogCloudPush==='function')catalogCloudPush(); }catch(e){} },1500); }
+function bumpUses(entry){ if(!entry||entry.kb)return; const cat=getCatalog(); const i=cat.findIndex(e=>norm(e.element)===norm(entry.element)); if(i>=0){ cat[i].uses=(cat[i].uses||0)+1; saveCatalog(cat); } }
+
+const AC_FIELDS=['element','description','cause','recommendation','location','urgency'];
+let _ac={items:[],field:null,ri:0,fi:0,sel:-1};
+function catalogMatch(field,q){ const nq=norm(q); if(nq.length<1)return [];
+  const list=mergedCatalog(); const valOf=e=> field==='element'?e.element:(e[field]||'');
+  const seen=new Set(); const out=[];
+  for(const e of list){ const v=valOf(e); if(!v||!norm(v).includes(nq))continue;
+    const k=norm(e.element)+'|'+norm(v); if(seen.has(k))continue; seen.add(k); out.push(e); if(out.length>=7)break; }
+  return out;
+}
+function acInput(el){ const m=/^roofs\.(\d+)\.findings\.(\d+)\.(\w+)$/.exec(el.dataset.path||''); if(!m){ hideAC(); return; }
+  const field=m[3]; if(AC_FIELDS.indexOf(field)<0){ hideAC(); return; }
+  const items=catalogMatch(field, el.innerText); if(!items.length){ hideAC(); return; }
+  showAC(el, items, field, +m[1], +m[2]); }
+function showAC(anchor, items, field, ri, fi){ const d=document.getElementById('acDrop'); _ac={items,field,ri,fi,sel:-1};
+  const head=field==='element'?'בחר ממצא — ימלא את כל הפרטים':'הצעות מהקטלוג';
+  d.innerHTML='<div class="ac-head">'+head+'</div>'+items.map((e,idx)=>{ const main=field==='element'?e.element:(e[field]||'');
+    const sub=field==='element'?((e.recommendation||e.description||'').slice(0,70)):('— '+e.element);
+    return `<div class="ac-item" data-idx="${idx}"><div class="ac-main">${esc(main)}</div><div class="ac-sub">${esc(sub)}</div></div>`; }).join('');
+  const r=anchor.getBoundingClientRect();
+  d.style.top=(r.bottom+window.scrollY+2)+'px'; d.style.left=(r.left+window.scrollX)+'px'; d.style.width=Math.max(r.width,210)+'px';
+  d.hidden=false;
+}
+function hideAC(){ const d=document.getElementById('acDrop'); if(d)d.hidden=true; _ac.items=[]; _ac.sel=-1; }
+function highlightAC(){ document.querySelectorAll('#acDrop .ac-item').forEach((it,i)=>it.classList.toggle('sel',i===_ac.sel)); }
+function applyAC(entry, ri, fi, field){ const r=state.roofs[ri]; if(!r)return; const f=r.findings[fi]; if(!f)return;
+  if(field==='element'){ f.element=entry.element; if(entry.location)f.location=entry.location; if(entry.description)f.description=entry.description;
+    if(entry.cause)f.cause=entry.cause; if(entry.standardRef)f.standardRef=entry.standardRef; if(entry.severity)f.severity=entry.severity;
+    if(entry.recommendation)f.recommendation=entry.recommendation; if(entry.urgency)f.urgency=entry.urgency; }
+  else { f[field]=entry[field]||''; }
+  bumpUses(entry); hideAC(); save(); render();
+}
+function addFindingFromEntry(roofId, entry){ const r=findRoof(roofId); if(!r)return;
+  r.findings.push({ id:'f'+uid(), element:entry.element||'', location:entry.location||'', description:entry.description||'', cause:entry.cause||'', standardRef:entry.standardRef||'', severity:entry.severity||'major', recommendation:entry.recommendation||'', urgency:entry.urgency||'', photos:[] });
+  bumpUses(entry); save(); render(); closeCatalog(); }
+
+let _catRoof=null,_catItems=[];
+function openCatalog(roofId){ _catRoof=roofId; const s=document.getElementById('catSearch'); if(s)s.value=''; renderCatalog(''); document.getElementById('catModal').classList.add('open'); setTimeout(()=>{ try{ document.getElementById('catSearch').focus(); }catch(e){} },60); }
+function closeCatalog(){ const m=document.getElementById('catModal'); if(m)m.classList.remove('open'); }
+function renderCatalog(q){ const nq=norm(q); let list=mergedCatalog();
+  if(nq) list=list.filter(e=> norm(e.element).includes(nq)||norm(e.description).includes(nq)||norm(e.recommendation).includes(nq)||norm(e.cause).includes(nq));
+  list=list.slice(0,80); _catItems=list;
+  document.getElementById('catList').innerHTML = list.length? list.map((e,i)=>{ const sev=SEV[e.severity]||SEV.major;
+    return `<div class="libcard" data-catadd="${i}"><div class="libcard-main">
+      <div class="libcard-title">${esc(e.element)} <span class="badge" style="background:${sev.c};font-size:10px;padding:2px 7px;vertical-align:middle">${esc(sev.l)}</span>${e.kb?' <span class="libnow">מובנה</span>':''}</div>
+      <div class="libcard-sub">${esc((e.recommendation||e.cause||e.description||'').slice(0,100))}</div></div></div>`; }).join('')
+    : '<div class="hint" style="padding:20px;text-align:center">לא נמצאו ממצאים תואמים</div>';
+}
+
 /* ============================================================ cloud sync (Supabase) */
 const SUPA_URL='https://azojpbraehirtgooxanp.supabase.co';
 const SUPA_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF6b2pwYnJhZWhpcnRnb294YW5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MDI3MzEsImV4cCI6MjA5NzM3ODczMX0.Q_4wjd-MMXAF3Hf7yQxW9iMUKzhIuWRJt-RUh4qQr_0';
@@ -1160,12 +1259,21 @@ async function cloudPullAll(){
   }
   try{ if(typeof renderLibrary==='function' && document.getElementById('libModal').classList.contains('open'))renderLibrary(); }catch(e){}
 }
+async function catalogCloudPush(){ if(!sb||!_user)return;
+  try{ await sb.from('sync_records').upsert({user_id:_user.id,entity:'catalog',item_id:'_singleton',payload:{items:getCatalog()},deleted:false},{onConflict:'user_id,entity,item_id'}); }catch(e){} }
+async function catalogCloudPull(){ if(!sb||!_user)return;
+  try{ const {data,error}=await sb.from('sync_records').select('payload').eq('entity','catalog').eq('item_id','_singleton').maybeSingle();
+    if(!error&&data&&data.payload&&Array.isArray(data.payload.items))mergeCatalog(data.payload.items); }catch(e){} }
+function mergeCatalog(remote){ const local=getCatalog(); const map=new Map(local.map(e=>[norm(e.element),e]));
+  remote.forEach(e=>{ if(!e||!e.element)return; const k=norm(e.element); const ex=map.get(k); if(!ex||(e.ts||0)>(ex.ts||0))map.set(k,e); });
+  saveCatalog([...map.values()].sort((a,b)=>(b.ts||0)-(a.ts||0))); }
 async function cloudFullSync(){
   if(!sb||!_user||_syncing)return; _syncing=true; cloudStatus('מסנכרן…');
   try{
     await cloudPullAll();
     const lib=loadLib()||{reports:[]};
     for(const r of lib.reports){ await cloudPushReport(r.id); }
+    await catalogCloudPull(); await catalogCloudPush();
     cloudStatus('מסונכרן ✓ ('+new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})+')');
   }catch(e){ cloudStatus('שגיאת סנכרון: '+(e.message||e)); }
   finally{ _syncing=false; }
