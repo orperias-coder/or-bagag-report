@@ -1,0 +1,1211 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>אור בגג · בונה דוח ייעוץ ובדיקה</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='11' fill='%23e8a82c'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+:root{
+  --stone:#e8dcc8; --stone-d:#d4c5ab; --plaster:#f4efe4; --terra:#8b5e3c; --terra-d:#5c3a22;
+  --sun:#e8a82c; --sun-deep:#cf8f18; --sun-glow:rgba(232,168,44,.4); --amber:#c4941a; --amber-l:#f5e6bf;
+  --sage:#6b8f6b; --sage-l:#dce8dc; --danger:#a64030; --dusk:#1a1f3a;
+  --ink:#2a1f12; --ink2:#5c4a36; --ink3:#8a7a66;
+  --hairline:rgba(42,31,18,.10); --hairline-2:rgba(42,31,18,.18);
+  --sh-2:0 2px 4px rgba(42,31,18,.05),0 6px 16px rgba(42,31,18,.07);
+  --sh-3:0 4px 8px rgba(42,31,18,.06),0 12px 32px rgba(42,31,18,.10);
+  --serif:'Frank Ruhl Libre','Heebo',Georgia,serif;
+  --sans:'Heebo',system-ui,-apple-system,Arial,sans-serif;
+}
+*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+html,body{margin:0;padding:0}
+body{font-family:var(--sans);color:var(--ink2);background:linear-gradient(to bottom,#fbf7ee,var(--plaster));line-height:1.55;-webkit-text-size-adjust:100%}
+
+/* ---------- toolbar ---------- */
+.toolbar{position:sticky;top:0;z-index:50;display:flex;flex-wrap:wrap;gap:8px;align-items:center;
+  padding:10px 14px;background:rgba(244,239,228,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--hairline)}
+.toolbar .brand{font-family:var(--serif);font-weight:900;color:var(--terra-d);font-size:17px;margin-inline-end:auto;display:flex;align-items:center;gap:8px}
+.toolbar .brand .sun{width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 50% 40%,#ffd97a,var(--sun),var(--sun-deep));box-shadow:0 0 10px var(--sun-glow)}
+.btn{font-family:var(--sans);font-weight:700;font-size:13.5px;color:var(--terra-d);background:linear-gradient(145deg,#ede2cd,var(--stone));
+  border:1px solid var(--stone-d);border-radius:11px;padding:9px 13px;cursor:pointer;transition:transform .15s,box-shadow .15s,background .15s;white-space:nowrap}
+.btn:hover{box-shadow:var(--sh-2)}
+.btn:active{transform:scale(.96)}
+.btn.primary{color:#3a2710;background:linear-gradient(135deg,var(--sun),var(--sun-deep));border-color:var(--sun-deep);box-shadow:0 4px 14px var(--sun-glow)}
+.btn.ghost{background:transparent;border-color:var(--hairline-2)}
+.savestat{font-size:12px;color:var(--ink3);margin-inline-start:4px}
+
+/* ---------- document ---------- */
+.doc{max-width:860px;margin:22px auto 80px;background:#fff;border-radius:16px;box-shadow:var(--sh-3);padding:34px 40px 46px;position:relative}
+.sec{margin-top:34px;padding-top:6px}
+.sec:first-of-type{margin-top:0}
+.eyebrow{font-family:var(--sans);font-weight:800;font-size:11px;letter-spacing:2px;color:var(--amber);text-transform:none;margin-bottom:5px}
+.sec-h{font-family:var(--serif);font-weight:900;color:var(--ink);font-size:21px;margin:0 0 4px;letter-spacing:-.2px;display:flex;align-items:baseline;gap:9px}
+.sec-h .num{font-family:var(--sans);font-weight:800;font-size:13px;color:#fff;background:var(--terra);min-width:24px;height:24px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;align-self:center}
+.sec-sub{font-size:12.5px;color:var(--ink3);margin:0 0 14px}
+.gold-line{width:48px;height:2px;background:var(--amber);border-radius:1px;box-shadow:0 0 8px var(--sun-glow);margin:8px 0 16px}
+.sec-head-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.sec-head-main{flex:1;min-width:0}
+.sec-toggle{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--ink2);background:var(--plaster);border:1px solid var(--hairline);border-radius:10px;padding:6px 10px;cursor:pointer;white-space:nowrap;user-select:none;margin-top:2px}
+.sec-toggle input{accent-color:var(--sage);width:17px;height:17px;cursor:pointer;margin:0}
+.sec-off>.sec-head-row .sec-h{color:var(--ink3)}
+.sec-off>.sec-head-row .sec-h .num{background:var(--stone-d)}
+.sec-off .eyebrow{opacity:.55}
+.sec-offnote{font-size:12px;color:var(--ink3);font-style:italic;margin:6px 0 2px}
+.sec-off .sec-body{display:none}
+body.preview .sec-off{display:none!important}
+.card{background:#fff;border:1px solid var(--hairline);border-radius:14px;padding:18px 18px;box-shadow:var(--sh-2);margin-bottom:14px}
+
+/* ---------- cover ---------- */
+.cover{margin:-6px -8px 8px;padding:0}
+.sky{position:relative;height:150px;background:linear-gradient(to bottom,#fdf3da 0%,#f9ecd1 55%,#f4efe4 100%);border-radius:14px 14px 0 0;overflow:hidden}
+.sky .sun{position:absolute;left:50%;bottom:-46px;transform:translateX(-50%);width:140px;height:140px;border-radius:50%;
+  background:radial-gradient(circle at 50% 40%,#ffe39a,var(--sun) 55%,var(--sun-deep));box-shadow:0 0 50px var(--sun-glow),0 0 90px var(--sun-glow)}
+.sky .roofline{position:absolute;left:0;right:0;bottom:0;height:40px;background:var(--terra-d);opacity:.92;
+  clip-path:polygon(0 100%,0 62%,14% 30%,28% 58%,46% 22%,64% 56%,80% 34%,100% 60%,100% 100%)}
+.cover-body{padding:20px 30px 4px;text-align:center}
+.cover-brand{font-family:var(--serif);font-weight:900;font-size:26px;color:var(--terra-d);letter-spacing:-.3px}
+.cover-title{font-family:var(--serif);font-weight:700;font-size:22px;color:var(--ink);margin-top:10px;line-height:1.35}
+.cover-tag{font-size:12.5px;color:var(--ink3);margin-top:7px}
+.metagrid{display:grid;grid-template-columns:1fr 1fr;gap:10px 26px;margin-top:20px;text-align:start}
+.mrow{display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--hairline)}
+.mrow .lbl{flex:0 0 116px;font-size:12px;font-weight:700;color:var(--ink3);padding-top:2px}
+.mrow .val{flex:1}
+@media(max-width:640px){.metagrid{grid-template-columns:1fr}}
+
+/* ---------- editable fields ---------- */
+.ed{font-family:inherit;font-size:14px;color:var(--ink);min-height:1.5em;border-radius:7px;padding:4px 8px;
+  background:rgba(196,148,26,.055);border-bottom:1px dashed var(--hairline-2);outline:none;transition:background .12s,border-color .12s;white-space:pre-wrap;word-break:break-word}
+.ed:focus{background:var(--amber-l);border-bottom-color:var(--amber)}
+.ed:empty:before{content:attr(data-ph);color:var(--ink3);opacity:.6;font-weight:400}
+.ed.title{font-family:var(--serif);font-weight:700}
+.ed.big{font-size:15px}
+select.ed{appearance:auto;background:rgba(196,148,26,.07);border:1px solid var(--hairline-2);font-weight:600;padding:6px 8px;color:var(--ink);cursor:pointer}
+
+/* ---------- severity ---------- */
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#fff;padding:4px 10px;border-radius:20px}
+.dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+.sevsel{font-weight:700}
+.legend{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.legrow{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:11px;background:var(--plaster)}
+.legrow .lmean{font-size:12px;color:var(--ink2);margin-top:2px}
+@media(max-width:640px){.legend{grid-template-columns:1fr}}
+
+/* ---------- roof + findings ---------- */
+.roof{border:1px solid var(--hairline-2);border-radius:16px;padding:0;margin-bottom:20px;overflow:hidden;box-shadow:var(--sh-2)}
+.roof-head{display:flex;align-items:center;gap:10px;padding:13px 16px;background:linear-gradient(135deg,#f7efe0,#efe3cc);border-bottom:1px solid var(--hairline)}
+.roof-head .rtag{font-family:var(--serif);font-weight:900;font-size:17px;color:var(--terra-d)}
+.roof-head .rname{flex:1}
+.roof-body{padding:14px 16px}
+.subh{font-weight:800;font-size:13px;color:var(--terra-d);margin:4px 0 9px;letter-spacing:.2px;display:flex;align-items:center;gap:7px}
+.subh:before{content:"";width:14px;height:2px;background:var(--amber);border-radius:1px}
+.charsgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px}
+.charrow{display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px solid var(--hairline)}
+.charrow .lbl{flex:0 0 96px;font-size:12px;font-weight:700;color:var(--ink3);padding-top:5px}
+.charrow .val{flex:1}
+@media(max-width:640px){.charsgrid{grid-template-columns:1fr}}
+.hint{font-size:11.5px;color:var(--ink3);margin-top:4px}
+
+.finding{border:1px solid var(--hairline);border-radius:13px;padding:13px;margin-top:12px;background:#fffdf9}
+.finding-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.fnum{font-family:var(--sans);font-weight:800;font-size:12px;color:#fff;background:var(--terra);min-width:30px;height:22px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center}
+.fhgrow{flex:1}
+.flabel{font-size:11px;font-weight:800;color:var(--ink3);margin:9px 0 3px;letter-spacing:.3px}
+.demo-tag{font-size:10.5px;font-weight:800;color:#7a5a16;background:var(--amber-l);border:1px solid var(--amber);padding:2px 8px;border-radius:20px}
+
+/* ---------- photos ---------- */
+.photos{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
+.ph{width:148px;border:1px solid var(--hairline);border-radius:10px;overflow:hidden;background:#fff;box-shadow:var(--sh-2)}
+.ph img{width:100%;height:104px;object-fit:cover;display:block;background:var(--stone)}
+.ph .pmeta{padding:5px 7px}
+.ph .pnum{font-size:10px;font-weight:800;color:var(--amber);letter-spacing:.5px}
+.ph .pcap{font-size:11px}
+.ph .pdel{display:block;width:100%;margin-top:5px;font-size:11px;color:var(--danger);background:#fdf2ef;border:1px solid #eccfc9;border-radius:7px;padding:3px;cursor:pointer}
+.cover-photo{width:100%;max-width:340px;margin:16px auto 0;border-radius:12px;overflow:hidden;box-shadow:var(--sh-2);border:1px solid var(--hairline)}
+.cover-photo img{width:100%;display:block}
+
+/* ---------- list (disclaimers / general recs) ---------- */
+.olist{list-style:none;counter-reset:ol;padding:0;margin:0}
+.olist li{counter-increment:ol;display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--hairline)}
+.olist li:before{content:counter(ol);flex:0 0 auto;font-size:11px;font-weight:800;color:#fff;background:var(--stone-d);min-width:20px;height:20px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;margin-top:3px}
+.olist .li-body{flex:1}
+
+/* ---------- summary chips + table ---------- */
+.chips{display:flex;flex-wrap:wrap;gap:9px;margin:12px 0}
+.chip{display:flex;align-items:center;gap:8px;padding:8px 13px;border-radius:11px;background:var(--plaster);border:1px solid var(--hairline);font-size:13px;font-weight:700;color:var(--ink2)}
+.chip .cnt{font-size:16px;font-weight:900;color:var(--ink)}
+table.tbl{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+table.tbl th,table.tbl td{text-align:start;padding:9px 10px;border-bottom:1px solid var(--hairline)}
+table.tbl th{font-size:11.5px;font-weight:800;color:var(--ink3);background:var(--plaster)}
+table.tbl td.n{text-align:center;font-weight:800}
+
+/* ---------- mini buttons ---------- */
+.addbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}
+.mini{font-family:var(--sans);font-weight:700;font-size:12.5px;color:var(--terra-d);background:var(--stone);border:1px dashed var(--stone-d);border-radius:9px;padding:6px 11px;cursor:pointer}
+.mini:hover{background:var(--amber-l);border-color:var(--amber)}
+.mini.del{color:var(--danger);background:#fdf2ef;border-color:#eccfc9;border-style:solid}
+.sig{display:flex;gap:30px;flex-wrap:wrap;margin-top:18px;align-items:flex-end}
+.sig .sigbox{flex:1;min-width:180px}
+.sig .sigline{border-bottom:1.5px solid var(--ink2);height:34px;margin-bottom:5px}
+.sig .siglbl{font-size:12px;color:var(--ink3);font-weight:700}
+
+.print-footer{display:none}
+
+/* ---------- preview mode (on screen) ---------- */
+body.preview .edit-only{display:none!important}
+body.preview .ed{background:none;border:none;padding:2px 0}
+body.preview .ed:empty:before{content:''}
+body.preview select.ed{background:none;border:none;padding:0;appearance:none;font-weight:700}
+body.preview .finding,body.preview .roof,body.preview .card{box-shadow:none}
+
+/* ---------- print ---------- */
+@media print{
+  body{background:#fff}
+  .no-print{display:none!important}
+  .edit-only{display:none!important}
+  .sec-off{display:none!important}
+  .doc{max-width:none;margin:0;padding:0 4mm;box-shadow:none;border-radius:0}
+  .ed{background:none!important;border:none!important;padding:0!important;color:#000}
+  .ed:empty:before{content:''}
+  select.ed{background:none!important;border:none!important;appearance:none;padding:0!important}
+  .sec,.card,.roof,.finding,.legrow,.ph,.mrow,.charrow{break-inside:avoid}
+  .sec{margin-top:20px}
+  .roof{margin-bottom:14px}
+  .print-footer{display:block;position:fixed;bottom:4mm;left:0;right:0;text-align:center;font-size:9.5px;color:#666;border-top:1px solid #ddd;padding-top:3px}
+  @page{size:A4;margin:14mm 11mm 16mm}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ---------- sketch → AI technical drawing ---------- */
+.ph .ptag{display:inline-block;font-size:9.5px;font-weight:800;color:#7a5a16;background:var(--amber-l);border:1px solid var(--amber);padding:1px 6px;border-radius:20px;margin-bottom:3px}
+.modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(42,31,18,.55);display:none;align-items:flex-start;justify-content:center;padding:18px;overflow:auto}
+.modal-overlay.open{display:flex}
+.sketch-modal{background:var(--plaster);border-radius:18px;box-shadow:var(--sh-3);width:100%;max-width:560px;padding:18px;margin:auto}
+.sk-title{font-family:var(--serif);font-weight:900;color:var(--terra-d);font-size:19px;margin-bottom:10px}
+.sk-canvas-wrap{position:relative;background:#fff;border:1px solid var(--hairline-2);border-radius:12px;overflow:hidden}
+#skCanvas{display:block;width:100%;height:auto;touch-action:none;cursor:crosshair;background:#fff}
+.sk-tools{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-top:10px;font-size:12px;color:var(--ink3);font-weight:700}
+.sk-color{width:24px;height:24px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px var(--hairline-2);cursor:pointer;padding:0}
+.sk-color.active{box-shadow:0 0 0 2px var(--amber)}
+.sk-size{font-family:var(--sans);font-weight:700;font-size:12px;color:var(--terra-d);background:var(--stone);border:1px solid var(--stone-d);border-radius:8px;padding:5px 9px;cursor:pointer}
+.sk-size.active{background:var(--amber-l);border-color:var(--amber)}
+.sk-style{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-top:10px;font-size:12px;color:var(--ink3);font-weight:700}
+.sk-stylebtn{font-family:var(--sans);font-weight:700;font-size:12.5px;color:var(--terra-d);background:var(--stone);border:1px solid var(--stone-d);border-radius:9px;padding:6px 11px;cursor:pointer}
+.sk-stylebtn.active{background:var(--amber-l);border-color:var(--amber)}
+#skHint{margin-top:10px;min-height:2.6em}
+.sk-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.sk-status{margin-top:10px;font-size:13px;font-weight:700;color:var(--terra-d);min-height:1.2em}
+.sk-status.err{color:var(--danger)}
+.sk-result-imgs{display:flex;gap:10px;margin-top:6px}
+.sk-result-imgs>div{flex:1;text-align:center}
+.sk-result-imgs img{width:100%;border:1px solid var(--hairline);border-radius:10px;background:#fff}
+.sk-cap{font-size:11px;font-weight:800;color:var(--ink3);margin-bottom:3px}
+.ai-key-box{margin-top:12px;padding:13px;background:#fff;border:1px solid var(--amber);border-radius:12px;font-size:13px;color:var(--ink2);display:flex;flex-direction:column;gap:9px}
+.ai-key-box input,.ai-key-box select{font:inherit;padding:8px;border:1px solid var(--hairline-2);border-radius:8px}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--stone-d);border-top-color:var(--sun-deep);border-radius:50%;animation:skspin .8s linear infinite;vertical-align:-2px;margin-inline-end:6px}
+@keyframes skspin{to{transform:rotate(360deg)}}
+.modal-overlay.keyonly .sk-canvas-wrap,.modal-overlay.keyonly .sk-tools,.modal-overlay.keyonly .sk-style,.modal-overlay.keyonly #skHint,.modal-overlay.keyonly .sk-actions,.modal-overlay.keyonly .sk-result{display:none!important}
+
+/* ---------- reports library ---------- */
+.lib-modal{background:var(--plaster);border-radius:18px;box-shadow:var(--sh-3);width:100%;max-width:620px;padding:18px;margin:auto;max-height:90vh;display:flex;flex-direction:column}
+.lib-head{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.lib-head .sk-title{flex:1;margin:0}
+.lib-list{overflow:auto;display:flex;flex-direction:column;gap:11px;padding-bottom:4px}
+.libcard{background:#fff;border:1px solid var(--hairline);border-radius:13px;padding:13px 14px;box-shadow:var(--sh-2);display:flex;flex-direction:column;gap:10px}
+.libcard.active{border-color:var(--amber);box-shadow:0 0 0 2px var(--sun-glow)}
+.libcard-main{cursor:pointer}
+.libcard-title{font-family:var(--serif);font-weight:800;color:var(--ink);font-size:16px}
+.libnow{font-family:var(--sans);font-size:10.5px;font-weight:800;color:#3a2710;background:var(--amber-l);border:1px solid var(--amber);border-radius:20px;padding:1px 8px;margin-inline-start:6px;vertical-align:middle}
+.libcard-sub{font-size:13px;color:var(--ink2);margin-top:3px}
+.libcard-meta{font-size:11.5px;color:var(--ink3);margin-top:3px}
+.libcard-actions{display:flex;flex-wrap:wrap;gap:7px}
+.cloud-note{font-size:13px;color:var(--ink2);margin-bottom:12px;line-height:1.55}
+.cloud-wide{width:100%;margin-bottom:8px}
+.cloud-or{font-size:12px;color:var(--ink3);text-align:center;margin:12px 0 8px}
+.cloud-email{margin-bottom:8px}
+</style>
+</head>
+<body>
+
+<div class="toolbar no-print">
+  <div class="brand"><span class="sun"></span> אור בגג · בונה דוח</div>
+  <span class="savestat" id="savestat">נשמר</span>
+  <button class="btn ghost" id="btnCloud">ענן</button>
+  <button class="btn" id="btnLibrary">הדוחות שלי</button>
+  <button class="btn ghost" id="btnPreview">תצוגה מקדימה</button>
+  <button class="btn" id="btnExportJson">גיבוי ↓</button>
+  <button class="btn" id="btnImportJson">שחזור ↑</button>
+  <button class="btn ghost" id="btnAI">חיבור AI</button>
+  <button class="btn ghost" id="btnNew">דוח חדש</button>
+  <button class="btn primary" id="btnPrint">ייצא PDF / הדפס</button>
+</div>
+
+<div class="doc" id="doc"></div>
+
+<div class="print-footer" id="printFooter"></div>
+
+<input type="file" id="filePick" accept="image/*" multiple hidden>
+<input type="file" id="jsonPick" accept="application/json,.json" hidden>
+<input type="file" id="skPhotoPick" accept="image/*" hidden>
+
+<div class="modal-overlay no-print" id="skModal">
+  <div class="sketch-modal">
+    <div class="sk-title">שרטוט טכני · ציור או צילום → AI</div>
+    <div class="sk-canvas-wrap"><canvas id="skCanvas" width="1000" height="750"></canvas></div>
+    <div class="sk-tools">
+      <span>צבע</span>
+      <button class="sk-color active" data-color="#1a1a1a" style="background:#1a1a1a" title="שחור"></button>
+      <button class="sk-color" data-color="#1e5fa8" style="background:#1e5fa8" title="כחול"></button>
+      <button class="sk-color" data-color="#a64030" style="background:#a64030" title="אדום"></button>
+      <span style="margin-inline-start:6px">עובי</span>
+      <button class="sk-size" data-size="3">דק</button>
+      <button class="sk-size active" data-size="6">בינוני</button>
+      <button class="sk-size" data-size="12">עבה</button>
+      <button class="sk-size" id="skUndo">בטל</button>
+      <button class="sk-size" id="skClear">נקה</button>
+      <button class="sk-size" id="skPhoto">צלם / העלה שרטוט</button>
+    </div>
+    <textarea class="ed" id="skHint" placeholder="רמז ל-AI (לא חובה) — מה הפרט? לדוגמה: חתך אפרון קיר עם עלייה 15 ס״מ וקיפול טפטוף"></textarea>
+    <div class="sk-style">
+      <span>סגנון</span>
+      <button class="sk-stylebtn active" data-style="clean">קווי נקי (CAD)</button>
+      <button class="sk-stylebtn" data-style="shaded">מוצלל מפורט</button>
+    </div>
+    <div class="sk-actions">
+      <button class="btn primary" id="skGenerate">הפוך לשרטוט טכני</button>
+      <button class="btn ghost" id="skCancel">סגור</button>
+    </div>
+    <div class="sk-status" id="skStatus"></div>
+    <div class="sk-result" id="skResult" hidden>
+      <div class="sk-result-imgs">
+        <div><div class="sk-cap">המקור שלך</div><img id="skOrigImg" alt=""></div>
+        <div><div class="sk-cap">שרטוט טכני</div><img id="skOutImg" alt=""></div>
+      </div>
+      <div class="sk-actions">
+        <button class="btn primary" id="skSave">שמור לדוח</button>
+        <button class="btn" id="skRetry">צור שוב</button>
+        <button class="btn ghost" id="skBack">חזרה לציור</button>
+      </div>
+    </div>
+    <div class="ai-key-box" id="skKeyBox" hidden>
+      <div><b>חיבור AI (Gemini)</b> — צריך מפתח API חד-פעמי. נשמר במכשיר בלבד, לא נשלח לשום שרת.</div>
+      <input id="skKeyInput" placeholder="הדבק מפתח (מתחיל ב-AIza...)">
+      <label>איכות: <select id="skQuality"><option value="pro">איכות מקסימלית (Nano Banana Pro)</option><option value="flash">מהיר וזול (Flash Image)</option></select></label>
+      <div style="font-size:11.5px;color:var(--ink3)">מקבלים מפתח חינם ב-Google AI Studio (aistudio.google.com → Get API key).</div>
+      <button class="btn primary" id="skKeySave">שמור מפתח</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay no-print" id="libModal">
+  <div class="lib-modal">
+    <div class="lib-head"><div class="sk-title">הדוחות שלי</div><button class="btn primary" id="libNew">+ דוח חדש</button><button class="btn ghost" id="libClose">סגור</button></div>
+    <div id="libList" class="lib-list"></div>
+  </div>
+</div>
+
+<div class="modal-overlay no-print" id="cloudModal">
+  <div class="sketch-modal">
+    <div class="sk-title">ענן וסנכרון</div>
+    <div id="cloudSignedOut">
+      <div class="cloud-note">התחבר כדי לסנכרן את הדוחות בין הנייד למחשב. הנתונים פרטיים — רק אתה רואה אותם.</div>
+      <button class="btn primary cloud-wide" id="cloudGoogle">התחבר עם Google</button>
+      <div class="cloud-or">או קישור התחברות למייל (בלי סיסמה)</div>
+      <input id="cloudEmail" class="ed cloud-email" placeholder="האימייל שלך" inputmode="email">
+      <button class="btn cloud-wide" id="cloudEmailBtn">שלח לי קישור התחברות</button>
+    </div>
+    <div id="cloudSignedIn" hidden>
+      <div class="cloud-note">מחובר כ: <b id="cloudUserEmail"></b></div>
+      <div class="sk-actions">
+        <button class="btn primary" id="cloudSyncNow">סנכרן עכשיו</button>
+        <button class="btn ghost" id="cloudOut">התנתק</button>
+      </div>
+    </div>
+    <div class="sk-status" id="cloudStatus"></div>
+    <div class="sk-actions"><button class="btn ghost" id="cloudClose">סגור</button></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================ knowledge base */
+const SEV={
+  immediate:{l:'דורש טיפול מיידי',c:'#a64030'},
+  major:{l:'מומלץ לטפל',c:'#cf8f18'},
+  future:{l:'לתיקון עתידי',c:'#e8a82c'},
+  ok:{l:'תקין',c:'#6b8f6b'}
+};
+const SEV_MEAN={
+  immediate:'סכנה בטיחותית או נזק פעיל מתקדם — נזילה פעילה, סכנת קריסה/חשמל. לטיפול תוך ימים.',
+  major:'ליקוי משמעותי שיחמיר אם יוזנח ועלול לפגוע בערך הנכס. לטיפול תוך 30-90 יום.',
+  future:'ליקוי קל/תחזוקתי שאינו דחוף — בלאי נקודתי, פריט למעקב. לעבודת התחזוקה הבאה.',
+  ok:'הרכיב נבדק ונמצא תקין, ללא ליקוי — מתועד כדי להראות שהאזור נבדק.'
+};
+const PANELS=[
+  'איסכורית (פח גלי / טרפזי)','פנל מבודד / סנדוויץ׳','פנל ליבת פוליאוריטן (PUR/PIR)',
+  'רעפי פח / מטאל-טייל','פאנל אקוסטי','פוליקרבונט / סקיילייט','איטום ביטומני (גג שטוח)','אחר'
+];
+const SLOPE={
+  'איסכורית (פח גלי / טרפזי)':'שיפוע מינ׳ מומלץ ~7%-10% (4-6°)',
+  'פנל מבודד / סנדוויץ׳':'שיפוע מינ׳ מומלץ ~5%-7% (3-4°), בכפוף ליצרן',
+  'פנל ליבת פוליאוריטן (PUR/PIR)':'שיפוע מינ׳ ~5%-7%, בכפוף ליצרן',
+  'רעפי פח / מטאל-טייל':'שיפוע מינ׳ ~12° (~17%)',
+  'פאנל אקוסטי':'שיפוע מינ׳ ~5%-7%; צד החירור פונה פנימה',
+  'פוליקרבונט / סקיילייט':'שיפוע מינ׳ ~5%-10%; דרושים מרווחי התפשטות',
+  'איטום ביטומני (גג שטוח)':'שיפוע ניקוז מינ׳ ~1.5%-2% לכיוון המרזבים'
+};
+const DETAILS=[
+ {k:'wall',name:'מפגש קיר / אפרון קיר',
+  check:'גובה עליית האפרון על הקיר (15-20 ס״מ), עיגון הקצה העליון לחריץ/פרופיל (ולא סיליקון חשוף), חפיפה מספקת מעל הפנל ורציפות בפינות.',
+  fails:'אפרון נמוך מדי; קצה אטום בסיליקון שהתקלף; חפיפה בכיוון הפוך שמכניסה מים; חוסר רציפות בפינות; קורוזיה במגע פח-קיר.',
+  rec:'להתקין אפרון קיר עם עלייה ≥15 ס״מ ולעגן את קצהו לחריץ חצוב עם אטם גמיש; לוודא חפיפה של 10-15 ס״מ מעל פנל הגג; לאטום פינות בפח מקופל רציף ולא בסיליקון בלבד.'},
+ {k:'gutter',name:'מרזב + מורד / צינור ניקוז',
+  check:'שיפוע אורכי תקין לכיוון המורדים (בלי מים עומדים), חתך מתאים לשטח הגג, מספר/מיקום מורדים, חוזק המתלים, אטימת חיבורים, וניקוז המורד הרחק מהיסוד.',
+  fails:'מרזב ללא שיפוע/שיפוע הפוך שגורם לעמידת מים והצפה אחורה; חתך קטן מדי שגולש בגשם; מתלים חלשים; חיבורים דולפים; מורד שמסתיים צמוד ליסוד.',
+  rec:'להגדיר שיפוע ~0.5%-1% לאורך המרזב לכיוון המורדים; להחליף מרזב מעוות/מחליד ולהוסיף מורד אם החתך אינו מספיק; לחזק מתלים; להאריך מורד עם ברך הרחקה אל ניקוז מתוכנן.'},
+ {k:'eave',name:'כרכוב / אפרון קצה גג',
+  check:'שהמים נכנסים אל תוך המרזב ולא מאחוריו, קיפול טפטוף (drip) שמרחיק מהחזית, סגירת חתך הקצה של הפנל (בלי חשיפת ליבה), עיגון יציב ורציפות.',
+  fails:'קצה גג שמטפטף מאחורי המרזב ומרטיב את החזית; חתך פנל חשוף שמחליד/נספג; אין קיפול טפטוף; פרט רופף שמתרומם ברוח; פערים בין יחידות.',
+  rec:'להתקין אפרון קצה עם קיפול טפטוף שמכוון את המים אל תוך גוף המרזב; לסגור חתכי קצה בפרופיל סגירה; לעגן במרווחים קבועים ולחפוף בין היחידות לכיוון הזרימה.'},
+ {k:'ridge',name:'רכס הגג',
+  check:'חפיפה מספקת של כובע הרכס מעל הפנלים משני הצדדים, אטם קצף תואם-פרופיל בקצוות, עיגון דרך פסגת הגל, וחפיפת יחידות לכיוון הרוח השכיחה.',
+  fails:'כובע רכס צר/חפיפה קצרה שמכניס גשם נסחף; היעדר אטם תואם-פרופיל; ברגים דרך עמק הגל; יחידות חופפות הפוך; קורוזיה לאורך הרכס.',
+  rec:'להאריך/להחליף כובע רכס לחפיפה מספקת ולהוסיף אטם קצף תואם-פרופיל; להבריג רק דרך פסגת הגל עם ברגי אטם; באוורור — פרט רכס מאוורר עם הגנת רוח-גשם ורשת.'},
+ {k:'cladding',name:'חיפוי / קלדינג קיר',
+  check:'כיוון התקנה וחפיפה תקינים, פרט בסיס מנותק מהקרקע עם ניקוז/נשימה, סגירת פינות וקצוות בלי חשיפת ליבה, מצב הציפוי מול קורוזיה, ועיגון מול עומסי רוח.',
+  fails:'קצוות חשופים שמחלידים בבסיס; פנל בסיס נוגע בקרקע וסופג רטיבות; פינות בסיליקון מתפורר; חפיפה הפוכה; פגיעות עד הפלדה.',
+  rec:'להתקין פס בסיס מנותק מהקרקע עם פתחי ניקוז ולסגור חתכי בסיס; פרופילי פינה מקופלים רציפים במקום סיליקון; לתקן נקודות חלודה בניקוי וצביעה, ולהחליף פנלים פגועים עד הליבה.'},
+ {k:'seam',name:'חיבורי פנלים ואטמים',
+  check:'גודל החפיפה הרוחבית (15-20 ס״מ לפי השיפוע), קיום וסוג אטם בתפרים (בעיקר בשיפוע נמוך), שהחפיפות לכיוון הזרימה, ומצב חומרי האטימה.',
+  fails:'חפיפה קצרה בשיפוע נמוך שמכניסה מים; היעדר סרט אטימה בתפר; אטמי בוטיל/גומי מיובשים; תפרים פתוחים/מורמים ברוח.',
+  rec:'להוסיף סרט אטימה (butyl) רציף בתפרים, בפרט בשיפוע נמוך; להגדיל חפיפה רוחבית לפי השיפוע/היצרן; להחליף אטמים מיובשים ולעגן מחדש קצוות שמתרוממים.'},
+ {k:'screws',name:'ברגים ואביזרי קיבוע',
+  check:'הברגה בפסגת הגל (לא בעמק), צפיפות ברגים מול עומסי רוח, מצב דיסקיות ה-EPDM, הידוק נכון (לא רפוי/לא מועך), קורוזיה, וחורים נטושים שלא נאטמו.',
+  fails:'ברגים בעמק הגל = נקודת כניסת מים; דיסקיות EPDM מיובשות/סדוקות; הידוק יתר שמועך את הגומי; קורוזיה גלוונית; חורי קידוח ישנים פתוחים.',
+  rec:'להחליף ברגים עם דיסקיות מיובשות בברגי איסכורית חדשים עם אטם EPDM; להעביר ברגים לפסגת הגל ולאטום חורים ישנים; להוסיף ברגים בקצוות ובאזורי לחץ-רוח גבוה.'},
+ {k:'drainage',name:'מערכת ניקוז וזרימת מים',
+  check:'שהשיפוע בפועל עומד בדרישת היצרן, אין אזורים שטוחים/מלכודות מים, אורך נתיב הזרימה סביר, קיבולת מרזבים/מורדים מול שטח הגג, ופינוי המים הרחק מהמבנה.',
+  fails:'שיפוע נמוך מהמומלץ שגורם לזרימה איטית וחדירה בתפרים; שלוליות; קיבולת ניקוז קטנה שגולשת; עמק בלי פרט שמציף פנימה; מים אל בסיס הקיר.',
+  rec:'לוודא עמידה בשיפוע מינ׳ ולתקן אזורים שטוחים; לתכנן מס׳/קיבולת מרזבים לפי שטח ועצמת גשם; פרט עמק בערוצי מפגש; לנתב מורדים לניקוז מתוכנן הרחק מהיסוד.'},
+ {k:'cond',name:'מניעת עיבוי ובידוד',
+  check:'קיום בידוד/מחסום אדים בגג פח חד-שכבתי, שלמות ליבת הפנל המבודד, אוורור תת-גגי, גשרי קור, וסימני עיבוי בפועל (טפטוף/עובש/חלודה מבפנים).',
+  fails:'גג פח לא מבודד שמטפטף עיבוי ונראה כדליפה; מחסום אדים חסר/בצד הלא נכון; בידוד שספג מים דרך חתך; חלל תת-גגי אטום ללא אוורור; גשרי קור.',
+  rec:'לאבחן דליפה מול עיבוי (בדיקת טפטוף בלילה קר בלי גשם); להוסיף בידוד+מחסום אדים בצד החם; לסגור חתכי פנל; להוסיף אוורור תת-גגי (כניסה בכרכוב + יציאה ברכס).'},
+ {k:'penet',name:'חדירות בגג (צנרת / ארובות / חלונות גג)',
+  check:'פרט אטימה ייעודי לכל חדירה (לא סיליקון בלבד), הגבהה (curb) לחלונות גג/סקיילייט, סינר עליון מכוון-מים, מצב קולרי הגומי, ומיקום הרחק מעמק זרימה ראשי.',
+  fails:'אטימת סיליקון/קצף שהתקלף = מקור דליפה קלאסי; סקיילייט ללא הגבהה; קולר גומי סדוק; סינר ארובה ללא back-pan; חדירה בעמק זרימה ראשי.',
+  rec:'להחליף אטימות סיליקון בקולרי חדירה ייעודיים (rubber boot/EPDM); להתקין סקיילייט על מסגרת מוגבהת עם אפרון וסינר עליון; סביב ארובה — סינר משולב עם back-pan.'},
+ {k:'valley',name:'פרט עמק / מפגש מדרונים',
+  check:'רוחב/עומק העמק מול נפח הזרימה המשולב, חפיפה מספקת של הפנלים מעל פח העמק, חפיפת יחידות לכיוון הזרימה, היעדר חסימות, וניקוז תקין אל המרזב.',
+  fails:'פח עמק צר/רדוד שמוצף וגולש מתחת לפנלים; חפיפה לא מספקת; יחידות חופפות הפוך; עמק חסום בלכלוך; ברגים בתחתית העמק.',
+  rec:'להחליף/להרחיב פח עמק עם דופן מוגבהת בצדדים שיכיל את הזרימה המשולבת; להאריך חפיפת פנלים מעל העמק ולא לקבע ברגים בתחתיתו; לנקות תקופתית.'},
+ {k:'anchor',name:'עיגון לשלד והתנגדות רוח',
+  check:'מרחק התמיכות (span) מול עובי הפנל, צפיפות ברגים מוגברת בקצוות/פינות/רכס, מצב חיבור הפח לשלד, סימני התרוממות/גלים מרוחות, והתאמה לעומסי הרוח האזוריים.',
+  fails:'מרחק תמיכות גדול מדי שגורם לשקיעה/גלים; צפיפות ברגים אחידה בלי חיזוק בקצוות; ברגים שנשלפו אחרי סופות; קורוזיה בנקודת עיגון.',
+  rec:'להגביר צפיפות ברגים בקצוות/פינות/רכס לפי מפת עומסי הרוח; לוודא span תואם לעובי הפנל ע״פ היצרן; להחליף ברגים שנשלפו; לבדוק את הגג אחרי כל סופה.'}
+];
+const DEFAULT_DISCLAIMERS=[
+ "הדוח מתבסס על בדיקה חזותית (ויזואלית) לא-הורסת בלבד, ללא פתיחת חתכים או פירוק אלמנטים, אלא אם צוין אחרת. ייתכנו ליקויים נסתרים שלא ניתן היה לאתרם בשיטה זו.",
+ "הממצאים וההערכות משקפים את מצב הגגות במועד הביקור בלבד. מצב המבנה עשוי להשתנות עם הזמן עקב בלאי, מזג אוויר או עבודות נוספות.",
+ "חלק מהליקויים, ובמיוחד נזילות, מתגלים רק בתנאי גשם/הצפה. בדיקה בתנאי מזג אוויר יבש עשויה שלא לחשוף את מלוא היקף הנזילות; מומלץ לאמת בבדיקת הצפה/המטרה לפי ת״י 1476.",
+ "קיימת הבחנה מקצועית בין נזילה (חדירת מי גשם) לבין עיבוי (קונדנסציה). הקביעה לגבי המקור היא הערכה מקצועית מיטבית ועשויה לחייב מעקב נוסף לאימות.",
+ "אזורים שלא היו נגישים בבטיחות או חסומים פיזית לא נבדקו ואינם נכללים באחריות הדוח. מגבלות הגישה מפורטות בפרק היקף הבדיקה.",
+ "הגורם/מנגנון הכשל המצוין לכל ליקוי הוא הערכה הנדסית מקצועית המבוססת על הסימנים הגלויים בשטח, ואינו ערובה מוחלטת.",
+ "ההמלצות והפרטים הם עקרוניים-מקצועיים ואינם מהווים תכנית ביצוע מפורטת, חישוב סטטי או כתב כמויות מחייב. הביצוע באחריות מבצע מוסמך ובהתאם למפרטי היצרן והתקנים.",
+ "הדוח נערך עבור המזמין הרשום בלבד ולמטרה שלשמה הוזמן. אין להעבירו, לפרסמו או להסתמך עליו על ידי צד שלישי ללא אישור בכתב מעורך הדוח.",
+ "עורך הדוח אינו אחראי לאופן הביצוע בפועל של ההמלצות או לבחירת המבצע. מומלץ ליווי/פיקוח מקצועי בעת הביצוע.",
+ "הדוח אינו תחליף לבדיקת מעבדה מוסמכת (כגון בדיקת אטימות לפי ת״י 1476) או לחוות דעת מהנדס קונסטרוקציה במקרה של חשד לכשל מבני."
+];
+
+/* ============================================================ state */
+let state=null;
+const purls=new Map();           // photoKey -> objectURL
+let pmap={};                     // photoKey -> "P-01"
+let _photoTarget=null;           // where the next picked photos go
+
+let _uidc=0;
+function uid(){ return ++_uidc; }
+function syncUid(){ let mx=0; const scan=s=>{ if(!s)return; const m=/(\d+)$/.exec(s); if(m)mx=Math.max(mx,+m[1]); };
+  (state.roofs||[]).forEach(r=>{ scan(r.id); (r.roofPhotos||[]).forEach(p=>scan(p.key));
+    (r.findings||[]).forEach(f=>{ scan(f.id); (f.photos||[]).forEach(p=>scan(p.key)); }); });
+  scan(state.meta&&state.meta.coverPhoto); _uidc=Math.max(_uidc,mx); }
+
+function makeSeed(){
+  const today='17.06.2026';
+  const st={
+    meta:{
+      title:'דוח ייעוץ ובדיקה — עבודות פחחות ואיטום גגות בנייה קלה',
+      refNo:'OB-2026-0001',
+      siteAddress:'',
+      gushHelka:'', buildingType:'בנייה קלה — גגות פנלים',
+      areasInspected:'',
+      clientName:'', clientPhone:'', clientCompany:'',
+      consultantName:'', consultantTitle:'יועץ פחחות, גגות ובנייה קלה',
+      consultantPhone:'', consultantEmail:'', license:'', experience:'',
+      visitDate:today, issueDate:today, weather:'', attendees:'', propertyStatus:'',
+      coverPhoto:null
+    },
+    summary:{ generalState:'', headline:'' },
+    scope:{
+      reason:'',
+      purpose:'איתור ליקויים בעבודות הפחחות והאיטום ומתן המלצות לתכנון/תיקון הפרטים הנכונים בכל גג.',
+      included:'גג א׳, גג ב׳, גג ג׳, גג ד׳ — מעטפת הגג, פרטי הפחחות וההיקף, ומערכת הניקוז.',
+      excluded:'',
+      inspectionType:'בדיקה חזותית (ויזואלית) לא-הורסת, מלווה בתיעוד צילומי.',
+      accessLimits:''
+    },
+    methodology:{
+      methods:'בדיקה חזותית של מעטפת הגג ופרטי הפחחות; בדיקת שיפועים ונתיבי ניקוז; בדיקת מצב חפיות, ברגים ואטמים; תיעוד צילומי של הממצאים.',
+      instruments:'',
+      leakVsCond:'בכל ממצא רטיבות נבחנה ההבחנה בין חדירת מי גשם (נזילה) לבין עיבוי (קונדנסציה), בהתאם לסימנים בשטח.',
+      standardsRefd:'ת״י 1556 (חיפוי גגות קלים), ת״י 1476 (בדיקות אטימות מים), הנחיות יצרני הפנלים.'
+    },
+    asFound:'',
+    roofs:[
+      seedRoof('גג א׳', true),
+      seedRoof('גג ב׳', false),
+      seedRoof('גג ג׳', false),
+      seedRoof('גג ד׳', false)
+    ],
+    generalRecs:[''],
+    disclaimers:DEFAULT_DISCLAIMERS.slice(),
+    sections:{}
+  };
+  return st;
+}
+function seedRoof(name, withDemo){
+  const r={ id:'r'+uid(), name, location:'',
+    chars:{panelType:'',profile:'',thickness:'',insulation:'',slope:'',orientation:'',area:'',manufacturer:'',age:'',condition:''},
+    roofPhotos:[], findings:[] };
+  if(withDemo){
+    const d=DETAILS[0];
+    r.findings.push({ id:'f'+uid(), demo:true, element:d.name, location:'פינה צפון-מערבית',
+      description:'(דוגמה להמחשה — מחק ומלא ממצא מהשטח) נמצא אפרון קיר נמוך, מעוגן בסיליקון חשוף שהתקלף.',
+      cause:d.fails, standardRef:'ת״י 1556', severity:'major', recommendation:d.rec,
+      urgency:'מומלץ לטפל תוך 30-90 יום', photos:[] });
+  }
+  return r;
+}
+
+/* ============================================================ IndexedDB (photos) */
+let _db=null;
+function idb(){return new Promise((res,rej)=>{ if(_db)return res(_db);
+  const r=indexedDB.open('obReportPhotos',1);
+  r.onupgradeneeded=()=>r.result.createObjectStore('ph');
+  r.onsuccess=()=>{_db=r.result;res(_db);}; r.onerror=()=>rej(r.error); });}
+/* photos are namespaced per report:  IDB key = "<reportId>::<photoKey>" */
+function idbSetFor(id,k,b){return idb().then(db=>new Promise((res,rej)=>{const t=db.transaction('ph','readwrite');t.objectStore('ph').put(b,id+'::'+k);t.oncomplete=res;t.onerror=()=>rej(t.error);}));}
+function idbGetFor(id,k){return idb().then(db=>new Promise((res,rej)=>{const t=db.transaction('ph','readonly');const q=t.objectStore('ph').get(id+'::'+k);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);}));}
+function idbDelFor(id,k){return idb().then(db=>new Promise((res,rej)=>{const t=db.transaction('ph','readwrite');t.objectStore('ph').delete(id+'::'+k);t.oncomplete=res;t.onerror=()=>rej(t.error);}));}
+function idbKeysFor(id){return idb().then(db=>new Promise((res,rej)=>{const t=db.transaction('ph','readonly');const q=t.objectStore('ph').getAllKeys();q.onsuccess=()=>{const pre=id+'::';res((q.result||[]).filter(k=>typeof k==='string'&&k.indexOf(pre)===0).map(k=>k.slice(pre.length)));};q.onerror=()=>rej(q.error);}));}
+function idbSet(k,b){return idbSetFor(_activeId,k,b);}
+function idbGet(k){return idbGetFor(_activeId,k);}
+function idbDel(k){return idbDelFor(_activeId,k);}
+function idbKeys(){return idbKeysFor(_activeId);}
+function idbDeleteReport(id){return idb().then(db=>new Promise((res,rej)=>{const t=db.transaction('ph','readwrite');const os=t.objectStore('ph');const q=os.getAllKeys();q.onsuccess=()=>{const pre=id+'::';(q.result||[]).forEach(k=>{if(typeof k==='string'&&k.indexOf(pre)===0)os.delete(k);});};t.oncomplete=res;t.onerror=()=>rej(t.error);}));}
+function copyReportPhotos(srcId,dstId){return idb().then(db=>new Promise((res,rej)=>{const t=db.transaction('ph','readwrite');const os=t.objectStore('ph');const q=os.getAllKeys();q.onsuccess=()=>{const pre=srcId+'::';(q.result||[]).forEach(k=>{if(typeof k==='string'&&k.indexOf(pre)===0){const g=os.get(k);g.onsuccess=()=>{if(g.result!==undefined)os.put(g.result,dstId+'::'+k.slice(pre.length));};}});};t.oncomplete=res;t.onerror=()=>rej(t.error);}));}
+function migrateLegacyPhotos(id){return idb().then(db=>new Promise((res,rej)=>{const t=db.transaction('ph','readwrite');const os=t.objectStore('ph');const q=os.getAllKeys();q.onsuccess=()=>{(q.result||[]).forEach(k=>{if(typeof k==='string'&&k.indexOf('::')<0){const g=os.get(k);g.onsuccess=()=>{if(g.result!==undefined){os.put(g.result,id+'::'+k);os.delete(k);}};}});};t.oncomplete=res;t.onerror=()=>rej(t.error);}));}
+
+/* ============================================================ persistence (multi-report library) */
+const LS_LIB='obLib';
+let _activeId=null, _saveT=null;
+function loadLib(){ try{ return JSON.parse(localStorage.getItem(LS_LIB))||null; }catch(e){ return null; } }
+function saveLib(l){ try{ localStorage.setItem(LS_LIB, JSON.stringify(l)); }catch(e){} }
+function docKey(id){ return 'obDoc_'+id; }
+function loadDoc(id){ try{ return JSON.parse(localStorage.getItem(docKey(id))); }catch(e){ return null; } }
+function newReportId(){ return 'rep_'+Date.now().toString(36)+'_'+Math.floor(Math.random()*1e6).toString(36); }
+function docMeta(id,st){ st=st||{meta:{}}; const m=st.meta||{};
+  return { id, title:((m.siteAddress||m.title||'דוח ללא שם')+'').trim()||'דוח ללא שם', refNo:m.refNo||'',
+    address:m.siteAddress||'', client:m.clientName||'', roofs:(st.roofs||[]).length,
+    findings:(st.roofs||[]).reduce((a,r)=>a+(r.findings||[]).length,0), updatedAt:Date.now() }; }
+function scheduleSave(){ setStat('שומר…'); clearTimeout(_saveT); _saveT=setTimeout(save,350); }
+function save(){ try{
+    localStorage.setItem(docKey(_activeId), JSON.stringify(state));
+    const lib=loadLib()||{activeId:_activeId,reports:[]}; lib.activeId=_activeId;
+    const m=docMeta(_activeId,state); const i=lib.reports.findIndex(r=>r.id===_activeId);
+    if(i>=0){ m.createdAt=lib.reports[i].createdAt||Date.now(); m.cloudAt=lib.reports[i].cloudAt; lib.reports[i]=m; }
+    else { m.createdAt=Date.now(); lib.reports.unshift(m); }
+    saveLib(lib); setStat('נשמר'); scheduleCloudPush();
+  }catch(e){ setStat('שגיאת שמירה'); } }
+function setStat(t){ const e=document.getElementById('savestat'); if(e)e.textContent=t; }
+function ensureShape(){ if(!state.meta)state.meta={}; if(!state.roofs)state.roofs=[];
+  if(!state.generalRecs||!state.generalRecs.length)state.generalRecs=[''];
+  if(!state.disclaimers)state.disclaimers=DEFAULT_DISCLAIMERS.slice();
+  if(!state.sections||typeof state.sections!=='object')state.sections={}; }
+
+/* ============================================================ path helpers */
+function getPath(o,p){return p.split('.').reduce((a,k)=>a==null?a:a[k],o);}
+function setPath(o,p,v){const ks=p.split('.');let a=o;for(let i=0;i<ks.length-1;i++)a=a[ks[i]];a[ks[ks.length-1]]=v;}
+function esc(s){return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function findRoof(id){return state.roofs.find(r=>r.id===id);}
+function findFinding(r,id){return r.findings.find(f=>f.id===id);}
+
+/* ============================================================ render fragments */
+function ed(path, ph, cls){ const v=getPath(state,path); return `<div class="ed ${cls||''}" contenteditable="true" data-path="${path}" data-ph="${esc(ph||'')}">${esc(v)}</div>`; }
+function mrow(lbl,path,ph){ return `<div class="mrow"><div class="lbl">${lbl}</div><div class="val">${ed(path,ph)}</div></div>`; }
+function charrow(lbl,roofId,key,ph){ return `<div class="charrow"><div class="lbl">${lbl}</div><div class="val">${ed('roofs.'+roofIdx(roofId)+'.chars.'+key,ph)}</div></div>`; }
+function roofIdx(id){return state.roofs.findIndex(r=>r.id===id);}
+
+function selPanel(roofId){
+  const i=roofIdx(roofId); const cur=state.roofs[i].chars.panelType;
+  let o='<option value="">— בחר —</option>';
+  PANELS.forEach(p=>o+=`<option ${p===cur?'selected':''}>${esc(p)}</option>`);
+  const hint=SLOPE[cur]?`<div class="hint">${esc(SLOPE[cur])}</div>`:'';
+  return `<select class="ed" data-path="roofs.${i}.chars.panelType">${o}</select>${hint}`;
+}
+function selSev(path,cur){
+  let o=''; Object.keys(SEV).forEach(k=>o+=`<option value="${k}" ${k===cur?'selected':''}>${esc(SEV[k].l)}</option>`);
+  return `<select class="ed sevsel" data-path="${path}">${o}</select>`;
+}
+function badge(sevKey){ const s=SEV[sevKey]||SEV.major; return `<span class="badge" style="background:${s.c}"><span class="dot" style="background:#fff"></span>${esc(s.l)}</span>`; }
+
+function photoCell(p){
+  const url=purls.get(p.key)||''; const n=pmap[p.key]||'';
+  const tag=p.sketch?'<span class="ptag">שרטוט טכני</span>':'';
+  return `<div class="ph">
+    <img src="${url}" alt="">
+    <div class="pmeta">
+      ${tag}<div class="pnum">${esc(n)}</div>
+      <div class="ed pcap" contenteditable="true" data-path="__cap__" data-key="${p.key}" data-ph="כיתוב…">${esc(p.caption)}</div>
+      <button class="pdel edit-only" data-action="delPhoto" data-key="${p.key}">${p.sketch?'הסר שרטוט':'הסר תמונה'}</button>
+    </div></div>`;
+}
+function photoStrip(list, addAction, addAttrs){
+  let h='<div class="photos">';
+  list.forEach(p=>h+=photoCell(p));
+  h+=`<button class="mini edit-only" data-action="${addAction}" ${addAttrs}>+ תמונה</button>`;
+  h+=`<button class="mini edit-only" data-action="openSketch" ${addAttrs}>+ שרטוט AI</button>`;
+  h+='</div>';
+  return h;
+}
+
+function renderFinding(roof, f, n){
+  const i=roofIdx(roof.id); const j=roof.findings.indexOf(f);
+  const base='roofs.'+i+'.findings.'+j+'.';
+  return `<div class="finding">
+    <div class="finding-head">
+      <span class="fnum">${n}</span>
+      <div class="fhgrow">${ed(base+'element','אלמנט / פרט (לדוגמה: מפגש קיר)','big')}</div>
+      ${f.demo?'<span class="demo-tag edit-only">דוגמה</span>':''}
+      ${badge(f.severity)}
+    </div>
+    <div class="flabel">מיקום מדויק</div>${ed(base+'location','אזור / ציר / גובה…')}
+    <div class="flabel">ממצא — תיאור עובדתי</div>${ed(base+'description','מה נצפה בשטח…')}
+    <div class="flabel">גורם סביר / מנגנון כשל</div>${ed(base+'cause','ההערכה לגבי מקור הליקוי…')}
+    <div class="flabel">הפניית תקן (אופציונלי)</div>${ed(base+'standardRef','לדוגמה: ת״י 1556')}
+    <div class="flabel edit-only">דירוג חומרה</div><div class="edit-only">${selSev(base+'severity',f.severity)}</div>
+    <div class="flabel">המלצה ופרט ביצוע</div>${ed(base+'recommendation','הפתרון המומלץ והפרט הנכון…')}
+    <div class="flabel">דחיפות</div>${ed(base+'urgency','מתי לבצע…')}
+    ${photoStrip(f.photos, 'addFindingPhoto', `data-roof="${roof.id}" data-finding="${f.id}"`)}
+    <div class="addbar edit-only"><button class="mini del" data-action="delFinding" data-roof="${roof.id}" data-finding="${f.id}">מחק ממצא</button></div>
+  </div>`;
+}
+
+function renderRoof(roof){
+  const i=roofIdx(roof.id);
+  let kb='<option value="">— בחר פרט להוספה מהירה —</option><option value="blank">ממצא ריק</option>';
+  DETAILS.forEach(d=>kb+=`<option value="${d.k}">${esc(d.name)}</option>`);
+  let findings=''; roof.findings.forEach((f,idx)=>findings+=renderFinding(roof,f,idx+1));
+  return `<div class="roof">
+    <div class="roof-head">
+      <span class="rtag">${esc(roof.name)}</span>
+      <div class="rname">${ed('roofs.'+i+'.location','תיאור / מיקום הגג (לדוגמה: מדרון דרומי, מעל המחסן)')}</div>
+      <button class="mini del edit-only" data-action="delRoof" data-roof="${roof.id}">מחק גג</button>
+    </div>
+    <div class="roof-body">
+      <div class="subh">מאפיינים</div>
+      <div class="charsgrid">
+        <div class="charrow"><div class="lbl">סוג פנל</div><div class="val">${selPanel(roof.id)}</div></div>
+        ${charrow('פרופיל / דגם',roof.id,'profile','גלי / טרפזי…')}
+        ${charrow('עובי (מ״מ)',roof.id,'thickness','')}
+        ${charrow('בידוד / ליבה',roof.id,'insulation','פוליאוריטן / EPS / ללא')}
+        ${charrow('שיפוע',roof.id,'slope','% או מעלות')}
+        ${charrow('כיוון',roof.id,'orientation','דרום / מזרח…')}
+        ${charrow('שטח משוער (מ״ר)',roof.id,'area','')}
+        ${charrow('יצרן / ספק',roof.id,'manufacturer','')}
+        ${charrow('גיל / שנת התקנה',roof.id,'age','')}
+        ${charrow('מצב כללי',roof.id,'condition','תקין / חלודה / דליפות…')}
+      </div>
+
+      <div class="subh" style="margin-top:16px">תמונות מצב קיים</div>
+      ${photoStrip(roof.roofPhotos,'addRoofPhoto',`data-roof="${roof.id}"`)}
+
+      <div class="subh" style="margin-top:16px">ממצאים והמלצות</div>
+      ${findings||'<div class="hint">אין ממצאים עדיין — הוסף ממצא מהרשימה למטה.</div>'}
+      <div class="addbar edit-only">
+        <select class="ed kbpick" id="kb_${roof.id}">${kb}</select>
+        <button class="mini" data-action="addFinding" data-roof="${roof.id}">+ הוסף ממצא</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function countSev(){
+  const c={immediate:0,major:0,future:0,ok:0};
+  state.roofs.forEach(r=>r.findings.forEach(f=>{ if(c[f.severity]!=null)c[f.severity]++; }));
+  return c;
+}
+
+function render(){
+  pmap=numberPhotos();
+  const m=state.meta;
+  const c=countSev();
+  let secN=0;
+  const secWrap=(key,title,o)=>{ o=o||{}; const on=state.sections[key]!==false;
+    const num=on?('<span class="num">'+(++secN)+'</span>'):'';
+    const eb=o.eyebrow?`<div class="eyebrow">${o.eyebrow}</div>`:'';
+    const tog=`<label class="sec-toggle edit-only" title="הסר/החזר את הסעיף מהדוח"><input type="checkbox" data-sectoggle="${key}" ${on?'checked':''}><span>כלול בדוח</span></label>`;
+    const gold=o.gold?'<div class="gold-line"></div>':'';
+    const sub=o.sub?`<p class="sec-sub">${o.sub}</p>`:'';
+    const offNote=on?'':'<div class="sec-offnote edit-only">הסעיף מבוטל — לא ייכלל ב-PDF / בתצוגה</div>';
+    return `<div class="sec ${on?'':'sec-off'}"><div class="sec-head-row"><div class="sec-head-main">${eb}<h2 class="sec-h">${num}${title}</h2></div>${tog}</div>${offNote}<div class="sec-body">${gold}${sub}${o.body||''}</div></div>`;
+  };
+
+  /* cover */
+  let cover=`<div class="cover">
+    <div class="sky"><div class="sun"></div><div class="roofline"></div></div>
+    <div class="cover-body">
+      <div class="cover-brand">אור בגג</div>
+      ${ed('meta.title','שם הדוח','title cover-title')}
+      <div class="cover-tag">${ed('meta.consultantTitle','תחום היועץ')}</div>
+      ${m.coverPhoto?`<div class="cover-photo"><img src="${purls.get(m.coverPhoto)||''}"><button class="pdel edit-only" data-action="delCover">הסר תמונת שער</button></div>`
+        :`<div class="addbar edit-only" style="justify-content:center"><button class="mini" data-action="addCover">+ תמונת שער</button></div>`}
+      <div class="metagrid">
+        ${mrow('מס׳ סימוכין','meta.refNo','OB-2026-####')}
+        ${mrow('סוג מבנה','meta.buildingType','')}
+        ${mrow('כתובת הנכס','meta.siteAddress','')}
+        ${mrow('גוש / חלקה','meta.gushHelka','')}
+        ${mrow('אזורים שנבדקו','meta.areasInspected','')}
+        ${mrow('מצב הנכס','meta.propertyStatus','מאוכלס / ריק…')}
+        ${mrow('שם המזמין','meta.clientName','')}
+        ${mrow('טלפון מזמין','meta.clientPhone','')}
+        ${mrow('שם היועץ','meta.consultantName','')}
+        ${mrow('רישיון / הסמכה','meta.license','')}
+        ${mrow('טלפון היועץ','meta.consultantPhone','')}
+        ${mrow('דוא״ל היועץ','meta.consultantEmail','')}
+        ${mrow('תאריך הביקור','meta.visitDate','')}
+        ${mrow('תאריך הפקה','meta.issueDate','')}
+        ${mrow('מזג אוויר בביקור','meta.weather','')}
+        ${mrow('נוכחים בביקור','meta.attendees','')}
+      </div>
+    </div></div>`;
+
+  /* sections */
+  let chips='<div class="chips">';
+  ['immediate','major','future','ok'].forEach(k=>chips+=`<div class="chip"><span class="dot" style="background:${SEV[k].c}"></span><span class="cnt">${c[k]}</span> ${esc(SEV[k].l)}</div>`);
+  chips+='</div>';
+
+  const secSummary=secWrap('summary','תקציר מנהלים',{eyebrow:'סקירה',gold:true,body:`
+    <div class="card">
+      <div class="flabel">מצב כללי</div>${ed('summary.generalState','תקין / טעון תיקון / קריטי')}
+      <div class="flabel">סיכום והמלצה תמציתית</div>${ed('summary.headline','3-5 שורות: התמונה הכוללת וכיוון הפעולה המרכזי…','big')}
+      ${chips}
+    </div>`});
+
+  const secScope=secWrap('scope','רקע, מטרה והיקף',{eyebrow:'מסגרת',gold:true,body:`
+    <div class="card">
+      <div class="flabel">הסיבה לפנייה</div>${ed('scope.reason','נזילות / קבלת עבודה / בדיקה תקופתית…')}
+      <div class="flabel">מטרת הדוח</div>${ed('scope.purpose','')}
+      <div class="flabel">מה נכלל בבדיקה</div>${ed('scope.included','')}
+      <div class="flabel">מה לא נכלל</div>${ed('scope.excluded','')}
+      <div class="flabel">אופי הבדיקה</div>${ed('scope.inspectionType','')}
+      <div class="flabel">מגבלות גישה</div>${ed('scope.accessLimits','גובה / שטחים חסומים…')}
+    </div>`});
+
+  const secMethod=secWrap('methodology','שיטת הבדיקה והכלים',{eyebrow:'אמינות',gold:true,body:`
+    <div class="card">
+      <div class="flabel">שיטות שננקטו</div>${ed('methodology.methods','')}
+      <div class="flabel">כלי מדידה</div>${ed('methodology.instruments','מד-לחות / מצלמה תרמית / מפלס…')}
+      <div class="flabel">הבחנה נזילה ↔ עיבוי</div>${ed('methodology.leakVsCond','')}
+      <div class="flabel">תקנים ומפרטים שנשקלו</div>${ed('methodology.standardsRefd','')}
+    </div>`});
+
+  const secAsFound=secWrap('asFound','תיאור כללי של הגגות',{eyebrow:'תיאור',sub:'תיאור עובדתי ונייטרלי של המצב הקיים — בלי הערכות בשלב זה.',body:`
+    <div class="card">${ed('asFound','מבט-על על המבנה והגגות, סוגי הסיכוך, מערכת הניקוז ואלמנטי הפחחות הקיימים…','big')}</div>`});
+
+  let roofs=''; state.roofs.forEach(r=>roofs+=renderRoof(r));
+  const secRoofs=secWrap('roofs','ממצאים והמלצות — פר גג',{eyebrow:'לב הדוח',sub:'מקטע נפרד לכל גג. כל ממצא ממוספר, מגובה בצילום, ומלווה בהמלצה ובפרט הביצוע.',body:`
+    ${roofs}
+    <div class="addbar edit-only"><button class="mini" data-action="addRoof">+ הוסף גג</button></div>`});
+
+  /* severity legend + per-roof table */
+  let leg='<div class="legend">';
+  Object.keys(SEV).forEach(k=>leg+=`<div class="legrow"><span class="badge" style="background:${SEV[k].c}"><span class="dot" style="background:#fff"></span>${esc(SEV[k].l)}</span><div class="lmean">${esc(SEV_MEAN[k])}</div></div>`);
+  leg+='</div>';
+  let rows='';
+  state.roofs.forEach(r=>{const cc={immediate:0,major:0,future:0,ok:0};r.findings.forEach(f=>{if(cc[f.severity]!=null)cc[f.severity]++;});
+    rows+=`<tr><td>${esc(r.name)}</td><td class="n">${cc.immediate}</td><td class="n">${cc.major}</td><td class="n">${cc.future}</td><td class="n">${cc.ok}</td></tr>`;});
+  rows+=`<tr><td><b>סה״כ</b></td><td class="n">${c.immediate}</td><td class="n">${c.major}</td><td class="n">${c.future}</td><td class="n">${c.ok}</td></tr>`;
+  const secSeverity=secWrap('severity','דירוג חומרה ועדיפויות',{eyebrow:'תעדוף',gold:true,body:`
+    <div class="card">${leg}
+      <table class="tbl"><thead><tr><th>גג</th><th>מיידי</th><th>מומלץ</th><th>עתידי</th><th>תקין</th></tr></thead><tbody>${rows}</tbody></table>
+    </div>`});
+
+  /* general recs */
+  let gr='<ul class="olist">';
+  state.generalRecs.forEach((t,idx)=>gr+=`<li><div class="li-body">${ed('generalRecs.'+idx,'המלצה כללית / תחזוקה מונעת…')}</div><button class="mini del edit-only" data-action="delGenRec" data-i="${idx}">מחק</button></li>`);
+  gr+='</ul>';
+  const secGen=secWrap('generalRecs','המלצות כלליות ותחזוקה מונעת',{eyebrow:'המשך',gold:true,body:`
+    <div class="card">${gr}<div class="addbar edit-only"><button class="mini" data-action="addGenRec">+ הוסף המלצה</button></div></div>`});
+
+  /* photo appendix */
+  let app='<div class="photos">';let any=false;
+  state.roofs.forEach(r=>{ r.roofPhotos.forEach(p=>{any=true;app+=appendixCell(p,r.name,'מצב קיים');});
+    r.findings.forEach((f,fi)=>f.photos.forEach(p=>{any=true;app+=appendixCell(p,r.name,'ממצא '+(fi+1)+' · '+(f.element||''));})); });
+  app+='</div>';
+  const secApp=secWrap('appendix','נספח תיעוד צילומי',{eyebrow:'הוכחה',sub:'כל הצילומים בדוח, ממוספרים וממוקמים.',body:`
+    <div class="card">${any?app:'<div class="hint">לא נוספו תמונות עדיין.</div>'}</div>`});
+
+  /* disclaimers + signature */
+  let dis='<ul class="olist">';
+  state.disclaimers.forEach((t,idx)=>dis+=`<li><div class="li-body">${ed('disclaimers.'+idx,'סעיף הסתייגות…')}</div><button class="mini del edit-only" data-action="delDisc" data-i="${idx}">מחק</button></li>`);
+  dis+='</ul>';
+  const secDisc=secWrap('disclaimers','כתב הסתייגות ותוקף הדוח',{eyebrow:'משפטי',gold:true,body:`
+    <div class="card">${dis}<div class="addbar edit-only"><button class="mini" data-action="addDisc">+ הוסף סעיף</button></div>
+      <div class="sig">
+        <div class="sigbox"><div class="sigline"></div><div class="siglbl">חתימת עורך הדוח</div></div>
+        <div class="sigbox"><div class="siglbl">שם: ${ed('meta.consultantName','')}</div><div class="siglbl" style="margin-top:6px">תאריך: ${ed('meta.issueDate','')}</div></div>
+      </div>
+    </div>`});
+
+  document.getElementById('doc').innerHTML =
+    cover+secSummary+secScope+secMethod+secAsFound+secRoofs+secSeverity+secGen+secApp+secDisc;
+
+  updateFooter();
+}
+function appendixCell(p,roof,where){
+  const url=purls.get(p.key)||''; const n=pmap[p.key]||'';
+  return `<div class="ph"><img src="${url}"><div class="pmeta"><div class="pnum">${esc(n)} · ${esc(roof)}</div><div class="pcap">${esc(where)}${p.caption?' — '+esc(p.caption):''}</div></div></div>`;
+}
+function numberPhotos(){ let n=0;const map={};
+  state.roofs.forEach(r=>{ r.roofPhotos.forEach(p=>map[p.key]='P-'+String(++n).padStart(2,'0'));
+    r.findings.forEach(f=>f.photos.forEach(p=>map[p.key]='P-'+String(++n).padStart(2,'0'))); });
+  return map; }
+function updateFooter(){ document.getElementById('printFooter').textContent =
+  'אור בגג · '+(state.meta.refNo||'')+' · '+(state.meta.consultantEmail||'')+(state.meta.consultantPhone?(' · '+state.meta.consultantPhone):''); }
+
+/* ============================================================ events */
+const doc=document.getElementById('doc');
+
+doc.addEventListener('input',e=>{
+  const el=e.target.closest('[data-path],[data-key]'); if(!el)return;
+  if(el.dataset.path==='__cap__'){ // photo caption
+    const ph=findPhotoByKey(el.dataset.key); if(ph){ph.caption=el.innerText;} scheduleSave(); return;
+  }
+  if(el.dataset.path && el.isContentEditable){ setPath(state,el.dataset.path,el.innerText); scheduleSave();
+    if(/^meta\.(refNo|consultantEmail|consultantPhone)$/.test(el.dataset.path))updateFooter(); }
+});
+doc.addEventListener('change',e=>{
+  const tog=e.target.closest('[data-sectoggle]');
+  if(tog){ state.sections[tog.dataset.sectoggle]=tog.checked; save(); render(); return; }
+  const el=e.target.closest('select[data-path]'); if(!el)return;
+  setPath(state,el.dataset.path,el.value); save(); render();
+});
+// keep contenteditable plain-text on paste
+doc.addEventListener('paste',e=>{ const el=e.target.closest('.ed[contenteditable]'); if(!el)return;
+  e.preventDefault(); const t=(e.clipboardData||window.clipboardData).getData('text'); document.execCommand('insertText',false,t); });
+
+doc.addEventListener('click',e=>{
+  const b=e.target.closest('[data-action]'); if(!b)return;
+  const a=b.dataset.action;
+  if(a==='addRoof'){ const r=seedRoof('גג חדש',false); state.roofs.push(r); save(); render(); }
+  else if(a==='delRoof'){ if(confirm('למחוק את הגג וכל הממצאים שבו?')){ const r=findRoof(b.dataset.roof); purgeRoofPhotos(r); state.roofs=state.roofs.filter(x=>x.id!==b.dataset.roof); save(); render(); } }
+  else if(a==='addFinding'){ const sel=document.getElementById('kb_'+b.dataset.roof); addFinding(b.dataset.roof, sel?sel.value:'blank'); }
+  else if(a==='delFinding'){ if(confirm('למחוק ממצא זה?')){ const r=findRoof(b.dataset.roof); const f=findFinding(r,b.dataset.finding); if(f)f.photos.forEach(p=>removePhoto(p.key)); r.findings=r.findings.filter(x=>x.id!==b.dataset.finding); save(); render(); } }
+  else if(a==='addRoofPhoto'){ _photoTarget={type:'roof',roof:b.dataset.roof}; pickPhotos(); }
+  else if(a==='addFindingPhoto'){ _photoTarget={type:'finding',roof:b.dataset.roof,finding:b.dataset.finding}; pickPhotos(); }
+  else if(a==='openSketch'){ _sketchTarget = b.dataset.finding ? {type:'finding',roof:b.dataset.roof,finding:b.dataset.finding} : {type:'roof',roof:b.dataset.roof}; openSketch(); }
+  else if(a==='addCover'){ _photoTarget={type:'cover'}; pickPhotos(true); }
+  else if(a==='delCover'){ removePhoto(state.meta.coverPhoto); state.meta.coverPhoto=null; save(); render(); }
+  else if(a==='delPhoto'){ deletePhotoEverywhere(b.dataset.key); save(); render(); }
+  else if(a==='addGenRec'){ state.generalRecs.push(''); save(); render(); }
+  else if(a==='delGenRec'){ state.generalRecs.splice(+b.dataset.i,1); if(!state.generalRecs.length)state.generalRecs.push(''); save(); render(); }
+  else if(a==='addDisc'){ state.disclaimers.push(''); save(); render(); }
+  else if(a==='delDisc'){ state.disclaimers.splice(+b.dataset.i,1); save(); render(); }
+});
+
+function addFinding(roofId, kind){
+  const r=findRoof(roofId); if(!r)return;
+  let f={ id:'f'+uid(), element:'', location:'', description:'', cause:'', standardRef:'', severity:'major', recommendation:'', urgency:'', photos:[] };
+  if(kind && kind!=='blank'){ const d=DETAILS.find(x=>x.k===kind); if(d){ f.element=d.name; f.cause=d.fails; f.recommendation=d.rec; f.standardRef='ת״י 1556'; } }
+  r.findings.push(f); save(); render();
+}
+
+/* ============================================================ photos */
+function findPhotoByKey(key){
+  if(state.meta.coverPhoto===key)return null;
+  for(const r of state.roofs){ const a=r.roofPhotos.find(p=>p.key===key); if(a)return a;
+    for(const f of r.findings){ const b=f.photos.find(p=>p.key===key); if(b)return b; } }
+  return null;
+}
+function pickPhotos(single){ const fp=document.getElementById('filePick'); fp.multiple=!single;
+  fp.onchange=()=>{ const files=[...fp.files]; fp.value=''; if(files.length)onPhotos(files); }; fp.click(); }
+function onPhotos(files){
+  const t=_photoTarget; if(!t)return;
+  files.forEach(file=>{
+    const key='p'+uid(); purls.set(key, URL.createObjectURL(file)); idbSet(key,file).catch(()=>{});
+    if(t.type==='cover'){ if(state.meta.coverPhoto)removePhoto(state.meta.coverPhoto); state.meta.coverPhoto=key; }
+    else if(t.type==='roof'){ findRoof(t.roof).roofPhotos.push({key,caption:''}); }
+    else if(t.type==='finding'){ const r=findRoof(t.roof); findFinding(r,t.finding).photos.push({key,caption:''}); }
+  });
+  _photoTarget=null; save(); render();
+}
+function removePhoto(key){ if(!key)return; const u=purls.get(key); if(u)URL.revokeObjectURL(u); purls.delete(key); idbDel(key).catch(()=>{}); }
+function deletePhotoEverywhere(key){
+  const entry=findPhotoByKey(key); if(entry&&entry.srcKey)removePhoto(entry.srcKey);
+  if(state.meta.coverPhoto===key)state.meta.coverPhoto=null;
+  state.roofs.forEach(r=>{ r.roofPhotos=r.roofPhotos.filter(p=>p.key!==key); r.findings.forEach(f=>f.photos=f.photos.filter(p=>p.key!==key)); });
+  removePhoto(key);
+}
+function purgeRoofPhotos(r){ if(!r)return;
+  r.roofPhotos.forEach(p=>{removePhoto(p.key);if(p.srcKey)removePhoto(p.srcKey);});
+  r.findings.forEach(f=>f.photos.forEach(p=>{removePhoto(p.key);if(p.srcKey)removePhoto(p.srcKey);})); }
+
+/* ============================================================ report library + toolbar */
+function makeSeedBlank(){ const s=makeSeed();
+  s.meta.refNo='OB-2026-'; s.meta.siteAddress=''; s.meta.areasInspected=''; s.meta.buildingType='';
+  s.summary.generalState=''; s.scope.reason='';
+  s.roofs=[ seedRoof('גג א׳',false) ]; return s; }
+
+async function switchTo(id){
+  for(const u of purls.values())URL.revokeObjectURL(u); purls.clear();
+  _activeId=id; state=loadDoc(id)||makeSeed(); ensureShape(); syncUid();
+  const lib=loadLib()||{reports:[]}; lib.activeId=id; saveLib(lib);
+  await loadActivePhotos(); render();
+}
+async function openReport(id){ if(id!==_activeId)await switchTo(id); closeLibrary(); }
+function newReport(){
+  for(const u of purls.values())URL.revokeObjectURL(u); purls.clear();
+  _activeId=newReportId(); state=makeSeedBlank(); ensureShape(); syncUid();
+  save(); render(); closeLibrary();
+}
+async function duplicateReport(id){
+  const src=loadDoc(id); if(!src)return;
+  const copy=JSON.parse(JSON.stringify(src)); copy.meta=copy.meta||{}; copy.meta.refNo=((copy.meta.refNo||'')+' (עותק)').trim();
+  const nid=newReportId(); await copyReportPhotos(id,nid);
+  localStorage.setItem(docKey(nid),JSON.stringify(copy));
+  const lib=loadLib()||{reports:[]}; const m=docMeta(nid,copy); m.createdAt=Date.now(); lib.reports.unshift(m); saveLib(lib);
+  renderLibrary();
+}
+async function deleteReport(id){
+  if(!confirm('למחוק את הדוח לצמיתות? (כולל התמונות שלו)'))return;
+  await idbDeleteReport(id); try{ localStorage.removeItem(docKey(id)); localStorage.removeItem('obUp_'+id); }catch(e){}
+  cloudDeleteReport(id);
+  const lib=loadLib()||{reports:[]}; lib.reports=lib.reports.filter(r=>r.id!==id); saveLib(lib);
+  if(id===_activeId){ if(lib.reports.length){ await switchTo(lib.reports[0].id); } else { newReport(); } }
+  renderLibrary();
+}
+async function exportReport(id){
+  const st=loadDoc(id); if(!st)return; setStat('מכין גיבוי…');
+  const photos={}; const keys=await idbKeysFor(id);
+  for(const k of keys){ const blob=await idbGetFor(id,k); if(blob)photos[k]=await blobToDataURL(blob); }
+  const data={v:1,state:st,photos};
+  const blob=new Blob([JSON.stringify(data)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=(((st.meta&&st.meta.refNo)||'דוח')+'').replace(/[\/\\:]+/g,'-')+'.json'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000); setStat('נשמר');
+}
+function importReport(){ const jp=document.getElementById('jsonPick');
+  jp.onchange=async()=>{ const f=jp.files[0]; jp.value=''; if(!f)return;
+    try{ const data=JSON.parse(await f.text()); const st=data.state; if(!st||!st.meta)throw 0;
+      const nid=newReportId();
+      if(data.photos){ for(const k in data.photos){ const blob=await dataURLToBlob(data.photos[k]); await idbSetFor(nid,k,blob); } }
+      localStorage.setItem(docKey(nid),JSON.stringify(st));
+      const lib=loadLib()||{reports:[]}; const m=docMeta(nid,st); m.createdAt=Date.now(); lib.reports.unshift(m); saveLib(lib);
+      await openReport(nid);
+    }catch(e){ alert('קובץ גיבוי לא תקין'); } };
+  jp.click(); }
+
+/* library UI */
+function libCard(r){
+  const dt=new Date(r.updatedAt||Date.now());
+  const when=dt.toLocaleDateString('he-IL')+' '+dt.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+  const active=r.id===_activeId;
+  return `<div class="libcard${active?' active':''}">
+    <div class="libcard-main" data-libopen="${r.id}">
+      <div class="libcard-title">${esc(r.title||'דוח ללא שם')}${active?' <span class="libnow">נוכחי</span>':''}</div>
+      <div class="libcard-sub">${esc([r.refNo,r.client].filter(Boolean).join(' · '))}</div>
+      <div class="libcard-meta">${r.roofs||0} גגות · ${r.findings||0} ממצאים · עודכן ${when}</div>
+    </div>
+    <div class="libcard-actions">
+      <button class="mini" data-libopen="${r.id}">פתח</button>
+      <button class="mini" data-libdup="${r.id}">שכפל</button>
+      <button class="mini" data-libexport="${r.id}">ייצא</button>
+      <button class="mini del" data-libdel="${r.id}">מחק</button>
+    </div></div>`;
+}
+function renderLibrary(){ const lib=loadLib()||{reports:[]};
+  const list=(lib.reports||[]).slice().sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+  document.getElementById('libList').innerHTML = list.length?list.map(libCard).join(''):'<div class="hint" style="padding:24px;text-align:center">אין דוחות שמורים עדיין — לחץ "+ דוח חדש"</div>'; }
+function openLibrary(){ renderLibrary(); document.getElementById('libModal').classList.add('open'); }
+function closeLibrary(){ const m=document.getElementById('libModal'); if(m)m.classList.remove('open'); }
+
+document.getElementById('libModal').addEventListener('click',e=>{
+  if(e.target.id==='libModal'){ closeLibrary(); return; }
+  const t=e.target.closest('[data-libopen],[data-libdup],[data-libexport],[data-libdel]'); if(!t)return;
+  if(t.dataset.libopen!=null) openReport(t.dataset.libopen);
+  else if(t.dataset.libdup!=null) duplicateReport(t.dataset.libdup);
+  else if(t.dataset.libexport!=null) exportReport(t.dataset.libexport);
+  else if(t.dataset.libdel!=null) deleteReport(t.dataset.libdel);
+});
+document.getElementById('libNew').onclick=newReport;
+document.getElementById('libClose').onclick=closeLibrary;
+
+/* toolbar */
+document.getElementById('btnLibrary').onclick=openLibrary;
+document.getElementById('btnAI').onclick=openKeyDialog;
+document.getElementById('btnPrint').onclick=()=>window.print();
+document.getElementById('btnPreview').onclick=()=>{ document.body.classList.toggle('preview');
+  document.getElementById('btnPreview').textContent=document.body.classList.contains('preview')?'חזרה לעריכה':'תצוגה מקדימה'; };
+document.getElementById('btnNew').onclick=newReport;
+document.getElementById('btnExportJson').onclick=()=>exportReport(_activeId);
+document.getElementById('btnImportJson').onclick=importReport;
+document.getElementById('btnCloud').onclick=()=>{ initSupa(); updateCloudUI(); document.getElementById('cloudModal').classList.add('open'); };
+document.getElementById('cloudClose').onclick=()=>document.getElementById('cloudModal').classList.remove('open');
+document.getElementById('cloudModal').addEventListener('click',e=>{ if(e.target.id==='cloudModal')e.currentTarget.classList.remove('open'); });
+document.getElementById('cloudGoogle').onclick=cloudSignInGoogle;
+document.getElementById('cloudEmailBtn').onclick=cloudSignInEmail;
+document.getElementById('cloudSyncNow').onclick=cloudFullSync;
+document.getElementById('cloudOut').onclick=cloudSignOut;
+
+function blobToDataURL(b){return new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.readAsDataURL(b);});}
+function dataURLToBlob(d){return fetch(d).then(r=>r.blob());}
+
+/* ============================================================ sketch → AI technical drawing */
+let _sketchTarget=null,_skCtx=null,_skColor='#1a1a1a',_skSize=6,_skStyle='clean',_skDrawing=false,_skUndo=[],_skBound=false,_lastOrig=null,_lastOut=null;
+let _skUsedModel='';
+function modelCandidates(){ return aiQuality()==='flash'
+  ? ['gemini-3.1-flash-image','gemini-3.1-flash-image-preview','gemini-2.5-flash-image']
+  : ['gemini-3-pro-image','gemini-3-pro-image-preview','gemini-2.5-flash-image']; }
+function aiKey(){return localStorage.getItem('obGeminiKey')||'';}
+function aiQuality(){return localStorage.getItem('obAiQuality')||'pro';}
+function $(id){return document.getElementById(id);}
+function setSkStatus(t,err){const e=$('skStatus');e.innerHTML=t;e.classList.toggle('err',!!err);}
+function showKeyBox(){const kb=$('skKeyBox');kb.hidden=false;$('skKeyInput').value=aiKey();$('skQuality').value=aiQuality();}
+
+function openSketch(){ const m=$('skModal'); m.classList.remove('keyonly'); m.classList.add('open');
+  $('skResult').hidden=true; $('skKeyBox').hidden=!!aiKey(); setSkStatus(''); skEnsureBound(); skResetCanvas(); $('skHint').value=''; }
+function openKeyDialog(){ const m=$('skModal'); m.classList.add('open','keyonly'); $('skResult').hidden=true; showKeyBox(); skEnsureBound(); }
+function closeSketch(){ $('skModal').classList.remove('open','keyonly'); }
+
+function skResetCanvas(){ const c=$('skCanvas'); _skCtx=c.getContext('2d'); _skCtx.fillStyle='#fff'; _skCtx.fillRect(0,0,c.width,c.height); _skUndo=[]; }
+function skPushUndo(){ try{ if(_skUndo.length>=20)_skUndo.shift(); _skUndo.push(_skCtx.getImageData(0,0,_skCtx.canvas.width,_skCtx.canvas.height)); }catch(e){} }
+function skPos(e){ const c=_skCtx.canvas,r=c.getBoundingClientRect(); return {x:(e.clientX-r.left)*(c.width/r.width),y:(e.clientY-r.top)*(c.height/r.height)}; }
+function skFitImage(img){ const c=_skCtx.canvas; _skCtx.fillStyle='#fff'; _skCtx.fillRect(0,0,c.width,c.height);
+  const s=Math.min(c.width/img.width,c.height/img.height),w=img.width*s,h=img.height*s; _skCtx.drawImage(img,(c.width-w)/2,(c.height-h)/2,w,h); }
+
+function skEnsureBound(){ if(_skBound)return; _skBound=true;
+  const c=$('skCanvas');
+  c.addEventListener('pointerdown',e=>{ e.preventDefault(); _skDrawing=true; skPushUndo(); const p=skPos(e);
+    _skCtx.strokeStyle=_skColor; _skCtx.lineWidth=_skSize; _skCtx.lineCap='round'; _skCtx.lineJoin='round';
+    _skCtx.beginPath(); _skCtx.moveTo(p.x,p.y); try{c.setPointerCapture(e.pointerId);}catch(_){} });
+  c.addEventListener('pointermove',e=>{ if(!_skDrawing)return; const p=skPos(e); _skCtx.lineTo(p.x,p.y); _skCtx.stroke(); });
+  const end=()=>{_skDrawing=false;}; c.addEventListener('pointerup',end); c.addEventListener('pointercancel',end); c.addEventListener('pointerleave',end);
+  document.querySelectorAll('.sk-color').forEach(b=>b.onclick=()=>{ _skColor=b.dataset.color; document.querySelectorAll('.sk-color').forEach(x=>x.classList.toggle('active',x===b)); });
+  document.querySelectorAll('.sk-size[data-size]').forEach(b=>b.onclick=()=>{ _skSize=+b.dataset.size; document.querySelectorAll('.sk-size[data-size]').forEach(x=>x.classList.toggle('active',x===b)); });
+  document.querySelectorAll('.sk-stylebtn').forEach(b=>b.onclick=()=>{ _skStyle=b.dataset.style; document.querySelectorAll('.sk-stylebtn').forEach(x=>x.classList.toggle('active',x===b)); });
+  $('skUndo').onclick=()=>{ const im=_skUndo.pop(); if(im)_skCtx.putImageData(im,0,0); };
+  $('skClear').onclick=()=>{ skPushUndo(); _skCtx.fillStyle='#fff'; _skCtx.fillRect(0,0,_skCtx.canvas.width,_skCtx.canvas.height); };
+  $('skPhoto').onclick=()=>{ const fp=$('skPhotoPick'); fp.onchange=()=>{ const f=fp.files[0]; fp.value=''; if(!f)return; const img=new Image(); img.onload=()=>{ skPushUndo(); skFitImage(img); URL.revokeObjectURL(img.src); }; img.src=URL.createObjectURL(f); }; fp.click(); };
+  $('skCancel').onclick=closeSketch;
+  $('skGenerate').onclick=skGenerate;
+  $('skSave').onclick=skSave;
+  $('skRetry').onclick=skGenerate;
+  $('skBack').onclick=()=>{ $('skResult').hidden=true; };
+  $('skKeySave').onclick=()=>{ const k=$('skKeyInput').value.trim(); if(!k){ setSkStatus('הדבק מפתח',true); return; }
+    localStorage.setItem('obGeminiKey',k); localStorage.setItem('obAiQuality',$('skQuality').value);
+    $('skKeyBox').hidden=true; setSkStatus('המפתח נשמר ✓'); if($('skModal').classList.contains('keyonly'))closeSketch(); };
+  $('skModal').addEventListener('click',e=>{ if(e.target.id==='skModal')closeSketch(); });
+}
+
+function buildSkPrompt(style,hint){
+  const common="You are converting a roofing / sheet-metal (פחחות) contractor's freehand sketch into a professional 2D construction DETAIL drawing. Keep the EXACT shape, proportions and topology of the sketch — do NOT invent elements that are not present. Preserve any dimension numbers, arrows and labels exactly as drawn; keep Hebrew text in Hebrew and typeset it neatly next to the relevant element. Orthographic flat 2D view, no perspective, no 3D, pure white background. Output ONLY the redrawn technical drawing image.";
+  const clean=" Style: clean CAD-style line drawing — crisp uniform thin black outlines on white, neat dimension/leader lines, light standard hatching for material cross-sections. Minimal and precise, like an architectural detail sheet.";
+  const shaded=" Style: polished technical illustration — clean black outlines plus subtle grey shading and material rendering (sheet metal, sealant, insulation, wall), still a clear flat 2D construction-detail view on a white background.";
+  const h=hint?(" Contractor's note (trust this if it conflicts with the drawing): \""+hint.replace(/"/g,"'")+"\"."):"";
+  return common+(style==='shaded'?shaded:clean)+h;
+}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+async function geminiImage(dataUrl,style,hint){
+  const key=aiKey(); if(!key)throw new Error('NO_KEY');
+  const b64=dataUrl.split(',')[1]; _skUsedModel='';
+  const body={contents:[{parts:[{text:buildSkPrompt(style,hint)},{inline_data:{mime_type:'image/png',data:b64}}]}],generationConfig:{responseModalities:['TEXT','IMAGE']}};
+  const cands=modelCandidates(); let quotaHit=false,lastErr='';
+  for(const model of cands){
+    for(let attempt=0;attempt<3;attempt++){
+      let r;
+      try{ r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); }
+      catch(e){ lastErr='בעיית רשת — בדוק חיבור אינטרנט'; await sleep(700*(attempt+1)); continue; }
+      if(r.status===429){ quotaHit=true; break; }                 // quota/rate → try next model
+      if(r.status>=500){ lastErr='השרת עמוס ('+r.status+')'; await sleep(1000*(attempt+1)); continue; } // real transient
+      let j; try{ j=await r.json(); }catch(e){ lastErr='תשובה לא תקינה מהשרת'; break; }
+      if(!r.ok){ const msg=(j.error&&j.error.message)||('שגיאה '+r.status); lastErr=msg;
+        if(r.status===404||/not found|not supported|unknown|does not exist/i.test(msg))break; // try next model
+        throw new Error(msg); }
+      const parts=((((j.candidates||[])[0]||{}).content)||{}).parts||[];
+      const ip=parts.find(p=>p.inline_data||p.inlineData);
+      if(!ip){ const t=parts.map(p=>p.text).filter(Boolean).join(' '); lastErr='לא הוחזרה תמונה'+(t?(': '+t.slice(0,140)):''); break; }
+      const d=ip.inline_data||ip.inlineData; _skUsedModel=model;
+      return 'data:'+(d.mime_type||d.mimeType||'image/png')+';base64,'+d.data;
+    }
+  }
+  if(quotaHit) throw new Error('QUOTA');
+  throw new Error(lastErr||'נכשל ליצור שרטוט');
+}
+async function skGenerate(){
+  if(!aiKey()){ showKeyBox(); setSkStatus('צריך להתחבר ל-AI קודם',true); return; }
+  const dataUrl=_skCtx.canvas.toDataURL('image/png');
+  const hint=$('skHint').value.trim();
+  $('skResult').hidden=true; $('skGenerate').disabled=true;
+  setSkStatus('<span class="spin"></span>יוצר שרטוט טכני… (10-25 שניות)');
+  try{
+    const out=await geminiImage(dataUrl,_skStyle,hint);
+    _lastOrig=dataUrl; _lastOut=out;
+    $('skOrigImg').src=dataUrl; $('skOutImg').src=out; $('skResult').hidden=false;
+    const fallbackNote=(_skUsedModel==='gemini-2.5-flash-image'&&aiQuality()==='pro')?' · נוצר עם מודל חינמי (המתקדם דורש חיוב)':'';
+    setSkStatus('מוכן ✓'+fallbackNote+' — אפשר לשמור, או לשנות סגנון וליצור שוב');
+  }catch(e){
+    if(e.message==='NO_KEY'){ showKeyBox(); setSkStatus('צריך להתחבר ל-AI',true); }
+    else if(e.message==='QUOTA'){ setSkStatus('מכסת ה-AI מוצתה / דורש חיוב — מודלי יצירת התמונה של Gemini דורשים הפעלת Billing ב-Google AI Studio (מאז דצ׳ 2025), עלות זעומה (~$0.07–0.13 לשרטוט). הפעל חיוב, או נסה שוב בעוד דקה.',true); }
+    else setSkStatus('שגיאה: '+e.message,true);
+  }
+  finally{ $('skGenerate').disabled=false; }
+}
+async function skSave(){
+  if(!_lastOut||!_sketchTarget)return; const t=_sketchTarget;
+  const origKey='p'+uid(),resKey='p'+uid();
+  const ob=await dataURLToBlob(_lastOrig),rb=await dataURLToBlob(_lastOut);
+  await idbSet(origKey,ob); await idbSet(resKey,rb);
+  purls.set(origKey,URL.createObjectURL(ob)); purls.set(resKey,URL.createObjectURL(rb));
+  const hint=$('skHint').value.trim();
+  const entry={key:resKey,caption:hint||'שרטוט טכני',sketch:true,srcKey:origKey,style:_skStyle};
+  if(t.type==='roof'){ findRoof(t.roof).roofPhotos.push(entry); }
+  else if(t.type==='finding'){ const r=findRoof(t.roof); const f=findFinding(r,t.finding); if(f)f.photos.push(entry); }
+  _lastOut=null; closeSketch(); save(); render();
+}
+
+/* ============================================================ cloud sync (Supabase) */
+const SUPA_URL='https://azojpbraehirtgooxanp.supabase.co';
+const SUPA_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF6b2pwYnJhZWhpcnRnb294YW5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MDI3MzEsImV4cCI6MjA5NzM3ODczMX0.Q_4wjd-MMXAF3Hf7yQxW9iMUKzhIuWRJt-RUh4qQr_0';
+let sb=null,_user=null,_cloudPushT=null,_syncing=false;
+
+function initSupa(){ if(sb)return sb; if(!window.supabase||!window.supabase.createClient)return null;
+  try{ sb=window.supabase.createClient(SUPA_URL,SUPA_ANON,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}); }catch(e){ sb=null; }
+  return sb; }
+function collectPhotoKeys(st){ const ks=[]; if(st&&st.meta&&st.meta.coverPhoto)ks.push(st.meta.coverPhoto);
+  (st.roofs||[]).forEach(r=>{ (r.roofPhotos||[]).forEach(p=>{ if(p.key)ks.push(p.key); if(p.srcKey)ks.push(p.srcKey); });
+    (r.findings||[]).forEach(f=>(f.photos||[]).forEach(p=>{ if(p.key)ks.push(p.key); if(p.srcKey)ks.push(p.srcKey); })); });
+  return ks; }
+function cloudStatus(t){ const e=document.getElementById('cloudStatus'); if(e)e.textContent=t||''; }
+function updateCloudUI(){
+  const btn=document.getElementById('btnCloud'); if(btn){ btn.textContent=_user?'ענן ✓':'ענן'; btn.classList.toggle('primary',!!_user); }
+  const inB=document.getElementById('cloudSignedIn'), outB=document.getElementById('cloudSignedOut');
+  if(inB&&outB){ inB.hidden=!_user; outB.hidden=!!_user; if(_user){ const em=document.getElementById('cloudUserEmail'); if(em)em.textContent=_user.email||'מחובר'; } }
+}
+async function cloudInit(){
+  if(!initSupa())return;
+  try{ sb.auth.onAuthStateChange((event,session)=>{ _user=(session&&session.user)||null; updateCloudUI();
+    if(event==='SIGNED_IN'){ cloudStatus('מחובר — מסנכרן…'); cloudFullSync(); } }); }catch(e){}
+  try{ const {data}=await sb.auth.getSession(); _user=(data&&data.session&&data.session.user)||null; }catch(e){}
+  updateCloudUI();
+  if(_user) cloudFullSync();
+}
+async function uploadReportPhotos(id,st){
+  const upKey='obUp_'+id; let uploaded; try{ uploaded=new Set(JSON.parse(localStorage.getItem(upKey)||'[]')); }catch(e){ uploaded=new Set(); }
+  for(const k of collectPhotoKeys(st)){ if(uploaded.has(k))continue;
+    let blob; try{ blob=await idbGetFor(id,k); }catch(e){} if(!blob)continue;
+    try{ const {error}=await sb.storage.from('media').upload(_user.id+'/'+id+'/'+k,blob,{upsert:true,contentType:(blob.type||'image/png')}); if(!error)uploaded.add(k); }catch(e){}
+  }
+  try{ localStorage.setItem(upKey,JSON.stringify([...uploaded])); }catch(e){}
+}
+async function downloadReportPhotos(id,st){
+  for(const k of collectPhotoKeys(st)){ let ex; try{ ex=await idbGetFor(id,k); }catch(e){} if(ex)continue;
+    try{ const {data,error}=await sb.storage.from('media').download(_user.id+'/'+id+'/'+k); if(!error&&data)await idbSetFor(id,k,data); }catch(e){}
+  }
+  const upKey='obUp_'+id; let up; try{ up=new Set(JSON.parse(localStorage.getItem(upKey)||'[]')); }catch(e){ up=new Set(); }
+  collectPhotoKeys(st).forEach(k=>up.add(k)); try{ localStorage.setItem(upKey,JSON.stringify([...up])); }catch(e){}
+}
+async function cloudPushReport(id){
+  if(!sb||!_user||!id)return; const st=loadDoc(id); if(!st)return;
+  await uploadReportPhotos(id,st);
+  try{ const {data,error}=await sb.from('sync_records').upsert({user_id:_user.id,entity:'report',item_id:id,payload:st,deleted:false},{onConflict:'user_id,entity,item_id'}).select('updated_at').single();
+    if(!error&&data){ const lib=loadLib()||{reports:[]}; const m=lib.reports.find(r=>r.id===id); if(m){ m.cloudAt=data.updated_at; saveLib(lib); } } }catch(e){}
+}
+async function cloudDeleteReport(id){ if(!sb||!_user)return;
+  try{ await sb.from('sync_records').upsert({user_id:_user.id,entity:'report',item_id:id,payload:{},deleted:true},{onConflict:'user_id,entity,item_id'}); }catch(e){} }
+async function cloudPullAll(){
+  if(!sb||!_user)return;
+  let data,error; try{ ({data,error}=await sb.from('sync_records').select('item_id,payload,updated_at,deleted').eq('entity','report')); }catch(e){ return; }
+  if(error||!data)return;
+  const lib=loadLib()||{activeId:_activeId,reports:[]}; let activeChanged=false;
+  for(const row of data){
+    const meta=lib.reports.find(r=>r.id===row.item_id);
+    if(row.deleted){ if(meta){ lib.reports=lib.reports.filter(r=>r.id!==row.item_id); try{ localStorage.removeItem(docKey(row.item_id)); }catch(e){} await idbDeleteReport(row.item_id); if(row.item_id===_activeId)activeChanged=true; } continue; }
+    if(!meta || meta.cloudAt!==row.updated_at){
+      try{ localStorage.setItem(docKey(row.item_id),JSON.stringify(row.payload)); }catch(e){}
+      await downloadReportPhotos(row.item_id,row.payload);
+      const nm=docMeta(row.item_id,row.payload); nm.createdAt=(meta&&meta.createdAt)||Date.now(); nm.cloudAt=row.updated_at;
+      const i=lib.reports.findIndex(r=>r.id===row.item_id); if(i>=0)lib.reports[i]=nm; else lib.reports.unshift(nm);
+      if(row.item_id===_activeId)activeChanged=true;
+    }
+  }
+  saveLib(lib);
+  if(activeChanged){
+    if(lib.reports.some(r=>r.id===_activeId)){ state=loadDoc(_activeId)||state; ensureShape(); syncUid(); await loadActivePhotos(); render(); }
+    else if(lib.reports.length){ await switchTo(lib.reports[0].id); }
+  }
+  try{ if(typeof renderLibrary==='function' && document.getElementById('libModal').classList.contains('open'))renderLibrary(); }catch(e){}
+}
+async function cloudFullSync(){
+  if(!sb||!_user||_syncing)return; _syncing=true; cloudStatus('מסנכרן…');
+  try{
+    await cloudPullAll();
+    const lib=loadLib()||{reports:[]};
+    for(const r of lib.reports){ await cloudPushReport(r.id); }
+    cloudStatus('מסונכרן ✓ ('+new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})+')');
+  }catch(e){ cloudStatus('שגיאת סנכרון: '+(e.message||e)); }
+  finally{ _syncing=false; }
+}
+function scheduleCloudPush(){ if(!sb||!_user)return; clearTimeout(_cloudPushT);
+  _cloudPushT=setTimeout(()=>{ cloudPushReport(_activeId).then(()=>cloudStatus('מסונכרן ✓')).catch(()=>{}); },2000); }
+async function cloudSignInGoogle(){ if(!initSupa())return; cloudStatus('פותח התחברות Google…');
+  try{ const {error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname}});
+    if(error)cloudStatus('Google עדיין לא מוגדר ('+error.message+') — השתמש בקישור-מייל'); }catch(e){ cloudStatus('שגיאה: '+(e.message||e)); }
+}
+async function cloudSignInEmail(){ if(!initSupa())return; const email=((document.getElementById('cloudEmail')||{}).value||'').trim();
+  if(!email){ cloudStatus('הזן כתובת אימייל'); return; } cloudStatus('שולח קישור…');
+  try{ const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+location.pathname}});
+    cloudStatus(error?('שגיאה: '+error.message):'נשלח קישור התחברות ל-'+email+'. פתח אותו מאותו מכשיר.'); }catch(e){ cloudStatus('שגיאה: '+(e.message||e)); }
+}
+async function cloudSignOut(){ if(!sb)return; try{ await sb.auth.signOut(); }catch(e){} _user=null; updateCloudUI(); cloudStatus('התנתקת'); }
+
+/* ============================================================ boot */
+async function loadActivePhotos(){
+  for(const u of purls.values())URL.revokeObjectURL(u); purls.clear();
+  try{ const keys=await idbKeys(); for(const k of keys){ const blob=await idbGet(k); if(blob)purls.set(k,URL.createObjectURL(blob)); } }catch(e){}
+}
+async function boot(){
+  const lib=loadLib();
+  if(lib && lib.reports && lib.reports.length){
+    _activeId=(lib.activeId && lib.reports.some(r=>r.id===lib.activeId))?lib.activeId:lib.reports[0].id;
+    state=loadDoc(_activeId)||makeSeed();
+  } else {
+    _activeId=newReportId();
+    let legacy=null; try{ legacy=localStorage.getItem('obReportV1'); }catch(e){}
+    if(legacy){ try{ state=JSON.parse(legacy); }catch(e){ state=makeSeed(); } await migrateLegacyPhotos(_activeId); try{ localStorage.removeItem('obReportV1'); }catch(e){} }
+    else { state=makeSeed(); }
+    saveLib({activeId:_activeId,reports:[]});
+  }
+  ensureShape(); syncUid();
+  await loadActivePhotos();
+  render(); save();
+  cloudInit();
+}
+boot();
+</script>
+</body>
+</html>
