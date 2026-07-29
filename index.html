@@ -1297,8 +1297,29 @@ async function loadActivePhotos(){
   try{ const keys=await idbKeys(); for(const k of keys){ const blob=await idbGet(k); if(blob)purls.set(k,URL.createObjectURL(blob)); } }catch(e){}
 }
 async function boot(){
+  // v0.2 — כניסה מאפליקציית הביקורים. אור ביקש שמה-[+] שם אפשר יהיה "להוסיף דוח חדש
+  // ולגשת לאפליקציה משם". בלי זה, קישור רגיל היה נוחת על **הדוח האחרון שערך** (הענף
+  // הראשון למטה) — כלומר "דוח חדש" היה פותח דוח קיים ונראה שבור.
+  //   ?new=1                        → דוח חדש וריק
+  //   &client= &phone= &address=    → פרטי הלקוח כבר בפנים
+  // הפרמטרים מנוקים מיד מה-URL: רענון דף עם ?new=1 היה יוצר דוח ריק *נוסף* בכל פעם
+  // ומשאיר את מה שאור הקליד מאחור.
+  const _qp = new URLSearchParams(location.search);
+  const _wantNew = _qp.get('new') === '1';
+  if(_wantNew){
+    try{ history.replaceState(null, '', location.pathname + location.hash); }catch(e){}
+  }
   const lib=loadLib();
-  if(lib && lib.reports && lib.reports.length){
+  if(_wantNew){
+    _activeId=newReportId(); state=makeSeedBlank();
+    if(!state.meta) state.meta={};
+    const _pre=(k,v)=>{ v=(v||'').trim(); if(v) state.meta[k]=v; };
+    _pre('clientName',  _qp.get('client'));
+    _pre('clientPhone', _qp.get('phone'));
+    _pre('siteAddress', _qp.get('address'));
+    // save() בסוף boot רושם את הדוח בספרייה ושומר על אלה שכבר קיימים — לא saveLib ידני,
+    // שהיה דורס את הרשימה (ראה הענף השלישי, שמותר לו לעשות זאת רק כשאין ספרייה בכלל).
+  } else if(lib && lib.reports && lib.reports.length){
     _activeId=(lib.activeId && lib.reports.some(r=>r.id===lib.activeId))?lib.activeId:lib.reports[0].id;
     state=loadDoc(_activeId)||makeSeed();
   } else {
