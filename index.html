@@ -232,8 +232,13 @@ body.preview .finding,body.preview .roof,body.preview .card{box-shadow:none}
   .cover-photo{box-shadow:none!important}
   .sec{margin-top:20px}
   .roof{margin-bottom:14px}
-  .print-footer{display:block;position:fixed;bottom:4mm;left:0;right:0;text-align:center;font-size:9.5px;color:#666;border-top:1px solid #ddd;padding-top:3px}
-  @page{size:A4;margin:14mm 11mm 16mm}
+  .print-footer{display:block;position:fixed;bottom:2mm;left:0;right:0;text-align:center;font-size:9.5px;color:#666;border-top:1px solid #ddd;padding-top:3px}
+  /* v0.10 — אור: "בהפקת PDF מופיע לינק לאפליקציה על כל דף." זה לא מהמסמך — כרום מדפיס
+     אוטומטית כותרת (שם+תאריך) למעלה ואת כתובת-הדף למטה, בתוך שולי-העמוד, כשיש להם מקום.
+     שוליים של 4מ"מ קטנים מהסף שכרום צריך לציור — והוא משמיט אותם לגמרי, בלי תלות
+     בהגדרות חלון-ההדפסה. חל גם על דף-השיתוף (שמעתיק את ה-CSS הזה), ששם הכתובת הייתה
+     ארוכה במיוחד. */
+  @page{size:A4;margin:4mm 11mm}
 }
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
