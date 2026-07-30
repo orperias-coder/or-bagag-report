@@ -632,6 +632,7 @@ function ensureShape(){ if(!state.meta)state.meta={}; if(!state.roofs)state.roof
   if(!state.generalRecs||!state.generalRecs.length)state.generalRecs=[''];
   if(!state.disclaimers)state.disclaimers=DEFAULT_DISCLAIMERS.slice();
   if(!state.sections||typeof state.sections!=='object')state.sections={};
+  if(!Array.isArray(state.videos))state.videos=[];   // v0.8 — סרטונים כלליים בסוף הדוח
   // v0.3 (FOLLOWUP) — `fu` נוצר **רק** בדוח-המשך. דוח בדיקה רגיל נשאר בלי השדה בכלל,
   // כדי שמסמכים קיימים לא יגדלו ולא ישתנו בכלל ע"י השדרוג הזה.
   if(isFollowUp() && state.followUp && !state.followUp.secUpgraded){
@@ -925,7 +926,9 @@ function render(){
   const c=countSev();
   let secN=0;
   const secWrap=(key,title,o)=>{ o=o||{}; const on=state.sections[key]!==false;
-    const num=on?('<span class="num">'+(++secN)+'</span>'):'';
+    // v0.8 — o.nonum: מדור שמוצג רק בעריכה (סרטונים ריק) לא צורך מספר, אחרת המספור
+    // במסמך המודפס היה מדלג על המספר שנבלע במדור הנסתר.
+    const num=(on&&!o.nonum)?('<span class="num">'+(++secN)+'</span>'):'';
     const eb=o.eyebrow?`<div class="eyebrow">${o.eyebrow}</div>`:'';
     const tog=`<label class="sec-toggle edit-only" title="הסר/החזר את הסעיף מהדוח"><input type="checkbox" data-sectoggle="${key}" ${on?'checked':''}><span>כלול בדוח</span></label>`;
     const gold=o.gold?'<div class="gold-line"></div>':'';
@@ -1061,6 +1064,16 @@ function render(){
   const secApp=secWrap('appendix','נספח תיעוד צילומי',{eyebrow:'הוכחה',sub:'כל הצילומים בדוח, ממוספרים וממוקמים.',body:`
     <div class="card">${any?app:'<div class="hint">לא נוספו תמונות עדיין.</div>'}</div>`});
 
+  /* v0.8 — אור: "שיהיה בסוף הדוח קישור לסרטונים רלוונטיים... גם בתוך הממצא אבל גם
+     בסוף לינק לקישורים כלליים." מדור סרטונים כללי — אותו videoStrip של הממצאים, על
+     state.videos. כשהוא ריק הוא עטוף edit-only: קיים בעריכה (כדי להוסיף בו את הראשון),
+     ולא מודפס/משותף כמדור ריק — ובלי לצרוך מספר-סעיף. */
+  const _hasVids = (state.videos||[]).length > 0;
+  const _secVidsInner = secWrap('videosSec','סרטונים',{eyebrow:'תיעוד',nonum:!_hasVids,
+    sub:'קישורים כלליים לתיעוד מצולם — סרטוני Google Drive נפתחים לצפייה בתוך הדף.',
+    body:`<div class="card">${videoStrip(state.videos,'videos')}</div>`});
+  const secVids = _hasVids ? _secVidsInner : `<div class="edit-only">${_secVidsInner}</div>`;
+
   /* disclaimers + signature */
   let dis='<ul class="olist">';
   state.disclaimers.forEach((t,idx)=>dis+=`<li><div class="li-body">${ed('disclaimers.'+idx,'סעיף הסתייגות…')}</div><button class="mini del edit-only" data-action="delDisc" data-i="${idx}">מחק</button></li>`);
@@ -1074,7 +1087,7 @@ function render(){
     </div>`});
 
   document.getElementById('doc').innerHTML =
-    cover+secFu+secSummary+secScope+secMethod+secAsFound+secRoofs+secSeverity+secGen+secApp+secDisc;   // v0.3 (FOLLOWUP) — secFu ריק בדוח רגיל
+    cover+secFu+secSummary+secScope+secMethod+secAsFound+secRoofs+secSeverity+secGen+secApp+secVids+secDisc;   // v0.3 (FOLLOWUP) — secFu ריק בדוח רגיל
 
   updateFooter();
 }
