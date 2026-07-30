@@ -1048,8 +1048,15 @@ function render(){
 
   /* photo appendix */
   let app='<div class="photos">';let any=false;
+  // v0.7 — אור: "בארכיון התמונות שבסוף הדוח לא מופיעות כל התמונות שהעליתי." הנספח אסף
+  // רק תמונות-גג ותמונות-ממצא; תמונות ה"אחרי ביצוע" של דוח-המשך (fu.photos) ממוספרות
+  // ב-numberPhotos אבל לא נאספו כאן — חסרות בנספח, והמספור מדלג. עכשיו הן נכנסות מיד
+  // אחרי תמונות ה"לפני" של אותו ממצא, באותו סדר כמו המספור.
   state.roofs.forEach(r=>{ r.roofPhotos.forEach(p=>{any=true;app+=appendixCell(p,r.name,'מצב קיים');});
-    r.findings.forEach((f,fi)=>f.photos.forEach(p=>{any=true;app+=appendixCell(p,r.name,'ממצא '+(fi+1)+' · '+(f.element||''));})); });
+    r.findings.forEach((f,fi)=>{
+      f.photos.forEach(p=>{any=true;app+=appendixCell(p,r.name,'ממצא '+(fi+1)+' · '+(f.element||''));});
+      ((f.fu&&f.fu.photos)||[]).forEach(p=>{any=true;app+=appendixCell(p,r.name,'ממצא '+(fi+1)+' · אחרי ביצוע'+(f.element?' — '+f.element:''));});
+    }); });
   app+='</div>';
   const secApp=secWrap('appendix','נספח תיעוד צילומי',{eyebrow:'הוכחה',sub:'כל הצילומים בדוח, ממוספרים וממוקמים.',body:`
     <div class="card">${any?app:'<div class="hint">לא נוספו תמונות עדיין.</div>'}</div>`});
