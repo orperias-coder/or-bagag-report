@@ -380,7 +380,7 @@ body.preview .finding,body.preview .roof,body.preview .card{box-shadow:none}
 
 <div class="modal-overlay no-print" id="libModal">
   <div class="lib-modal">
-    <div class="lib-head"><div class="sk-title">הדוחות שלי</div><button class="btn primary" id="libNew">+ דוח חדש</button><button class="btn ghost" id="libClose">סגור</button></div>
+    <div class="lib-head"><div class="sk-title">הדוחות שלי</div><button class="btn primary" id="libNew">+ דוח חדש</button><button class="btn ghost" id="libShrink" title="כיווץ חד-פעמי של כל התמונות בכל הדוחות">כווץ תמונות</button><button class="btn ghost" id="libClose">סגור</button></div>
     <div id="libList" class="lib-list"></div>
   </div>
 </div>
@@ -530,10 +530,24 @@ let _photoTarget=null;           // where the next picked photos go
 
 let _uidc=0;
 function uid(){ return ++_uidc; }
+/* v0.6 (תיקון דריסת-תמונות) — הסריקה פספסה שני מקומות, ולכן המונה חזר אחורה אחרי רענון
+   ותמונה חדשה קיבלה מפתח ששייך כבר לתמונה קיימת — idbSet דרס אותה. אור: "מחליף לי תמונות,
+   שם תמונות אחרות בסעיפים אחרים, משמיט חלק".
+   מה שהיה חסר: f.fu.photos (תמונות "אחרי ביצוע" בדוח-המשך, נוספו ב-v0.3 בלי לעדכן כאן)
+   ו-srcKey (מקור השרטוט). */
 function syncUid(){ let mx=0; const scan=s=>{ if(!s)return; const m=/(\d+)$/.exec(s); if(m)mx=Math.max(mx,+m[1]); };
-  (state.roofs||[]).forEach(r=>{ scan(r.id); (r.roofPhotos||[]).forEach(p=>scan(p.key));
-    (r.findings||[]).forEach(f=>{ scan(f.id); (f.photos||[]).forEach(p=>scan(p.key)); }); });
+  const scanPhotos=arr=>{ (arr||[]).forEach(p=>{ if(!p)return; scan(p.key); scan(p.srcKey); }); };
+  (state.roofs||[]).forEach(r=>{ scan(r.id); scanPhotos(r.roofPhotos);
+    (r.findings||[]).forEach(f=>{ scan(f.id); scanPhotos(f.photos); scanPhotos(f.fu && f.fu.photos); }); });
   scan(state.meta&&state.meta.coverPhoto); _uidc=Math.max(_uidc,mx); }
+/* חגורה שנייה: המונה נגזר גם ממה שבאמת שמור באחסון, לא רק ממה שהמסמך מזכיר. כך שגם אם
+   ייווסף בעתיד מקום-תמונות חדש ומישהו ישכח לעדכן את syncUid — לא תהיה דריסה. */
+async function syncUidFromStorage(){
+  try{ const keys = await idbKeys(); let mx = 0;
+    (keys||[]).forEach(k=>{ const m=/(\d+)$/.exec(String(k)); if(m) mx=Math.max(mx,+m[1]); });
+    _uidc = Math.max(_uidc, mx);
+  }catch(e){}
+}
 
 function makeSeed(){
   const today='17.06.2026';
@@ -610,6 +624,67 @@ function idbKeys(){return idbKeysFor(_activeId);}
 function idbDeleteReport(id){return idb().then(db=>new Promise((res,rej)=>{const t=db.transaction('ph','readwrite');const os=t.objectStore('ph');const q=os.getAllKeys();q.onsuccess=()=>{const pre=id+'::';(q.result||[]).forEach(k=>{if(typeof k==='string'&&k.indexOf(pre)===0)os.delete(k);});};t.oncomplete=res;t.onerror=()=>rej(t.error);}));}
 function copyReportPhotos(srcId,dstId){return idb().then(db=>new Promise((res,rej)=>{const t=db.transaction('ph','readwrite');const os=t.objectStore('ph');const q=os.getAllKeys();q.onsuccess=()=>{const pre=srcId+'::';(q.result||[]).forEach(k=>{if(typeof k==='string'&&k.indexOf(pre)===0){const g=os.get(k);g.onsuccess=()=>{if(g.result!==undefined)os.put(g.result,dstId+'::'+k.slice(pre.length));};}});};t.oncomplete=res;t.onerror=()=>rej(t.error);}));}
 function migrateLegacyPhotos(id){return idb().then(db=>new Promise((res,rej)=>{const t=db.transaction('ph','readwrite');const os=t.objectStore('ph');const q=os.getAllKeys();q.onsuccess=()=>{(q.result||[]).forEach(k=>{if(typeof k==='string'&&k.indexOf('::')<0){const g=os.get(k);g.onsuccess=()=>{if(g.result!==undefined){os.put(g.result,id+'::'+k);os.delete(k);}};}});};t.oncomplete=res;t.onerror=()=>rej(t.error);}));}
+
+/* ============================================================ כיווץ תמונות (v0.6)
+   עד כאן נשמר הקובץ בדיוק כפי שיצא מהמצלמה: צילום 12MP (3072x4080) או צילום-מסך PNG של 5MB.
+   הגיבוי מקודד כל תמונה ב-base64 — עוד כשליש נפח — ומשם זה הגיע ל-200MB ולכשל בסנכרון.
+   1920px / JPEG 0.82 הם בדיוק המספרים ש-compressImgDual באפליקציית הביקורים כבר עובדת לפיהם,
+   כדי ששתי האפליקציות יתנהגו אותו דבר. נמדד על התמונות עצמן: חיסכון 70%-94%. */
+const IMG_MAX_PX = 1920, IMG_QUALITY = 0.82;
+function compressImage(file, maxPx, quality){
+  maxPx = maxPx || IMG_MAX_PX; quality = quality || IMG_QUALITY;
+  return new Promise(res => {
+    // וידאו, PDF וכל מה שאינו תמונה — לא נוגעים. GIF מונפש יישבר בקנבס, אז גם הוא יוצא.
+    if(!file || !file.type || file.type.indexOf('image/') !== 0 || file.type === 'image/gif'){ res(file); return; }
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      try{
+        const scale = Math.min(1, maxPx / Math.max(img.naturalWidth, img.naturalHeight));
+        // כבר בתקציב וכבר JPEG — יוצאים בלי לקודד מחדש. בלי זה כל הרצה של הכיווץ החד-פעמי
+        // הייתה מקודדת שוב את אותה תמונה, והאיכות הייתה נשחקת בכל פעם. נתפס ע"י הבדיקה.
+        if(scale === 1 && file.type === 'image/jpeg'){ URL.revokeObjectURL(url); res(file); return; }
+        const w = Math.max(1, Math.round(img.naturalWidth * scale));
+        const h = Math.max(1, Math.round(img.naturalHeight * scale));
+        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);   // PNG עם שקיפות היה יוצא שחור בלי זה
+        ctx.drawImage(img, 0, 0, w, h);
+        c.toBlob(b => {
+          URL.revokeObjectURL(url);
+          // תמונה קטנה שכבר דחוסה עלולה לצאת גדולה יותר — במקרה כזה משאירים את המקור
+          res(b && b.size > 0 && b.size < file.size ? b : file);
+        }, 'image/jpeg', quality);
+      }catch(e){ URL.revokeObjectURL(url); res(file); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); res(file); };   // קובץ פגום — לא מאבדים אותו
+    img.src = url;
+  });
+}
+/* מעבר חד-פעמי על מה שכבר שמור, בכל הדוחות. בלתי-הפיך — נקרא רק מכפתור עם אישור מפורש.
+   כותב חזרה רק אם התוצאה באמת קטנה יותר, כך שכשל בתמונה בודדת משאיר אותה כמו שהיא. */
+async function compressAllPhotos(onProgress){
+  const db = await idb();
+  const keys = await new Promise((res,rej)=>{ const t=db.transaction('ph','readonly');
+    const q=t.objectStore('ph').getAllKeys(); q.onsuccess=()=>res(q.result||[]); q.onerror=()=>rej(q.error); });
+  let before=0, after=0, changed=0, i=0;
+  for(const k of keys){
+    i++;
+    const blob = await new Promise(res=>{ const t=db.transaction('ph','readonly');
+      const q=t.objectStore('ph').get(k); q.onsuccess=()=>res(q.result); q.onerror=()=>res(null); });
+    if(!blob || !blob.size){ continue; }
+    before += blob.size;
+    let out; try{ out = await compressImage(blob); }catch(e){ out = blob; }
+    after += out.size;
+    if(out !== blob && out.size < blob.size){
+      await new Promise(res=>{ const t=db.transaction('ph','readwrite');
+        t.objectStore('ph').put(out,k); t.oncomplete=res; t.onerror=res; });
+      changed++;
+    }
+    if(onProgress) onProgress(i, keys.length);
+  }
+  return { total:keys.length, changed, before, after };
+}
 
 /* ============================================================ persistence (multi-report library) */
 const LS_LIB='obLib';
@@ -1182,10 +1257,14 @@ function findPhotoByKey(key){
 }
 function pickPhotos(single){ const fp=document.getElementById('filePick'); fp.multiple=!single;
   fp.onchange=()=>{ const files=[...fp.files]; fp.value=''; if(files.length)onPhotos(files); }; fp.click(); }
-function onPhotos(files){
+async function onPhotos(files){
   const t=_photoTarget; if(!t)return;
-  files.forEach(file=>{
-    const key='p'+uid(); purls.set(key, URL.createObjectURL(file)); idbSet(key,file).catch(()=>{});
+  _photoTarget=null;                       // v0.6 — תופסים את היעד לפני ההמתנה לדחיסה, אחרת
+                                           // תמונה שנבחרת בזמן שהקודמת עוד מתכווצת נוחתת ביעד הישן
+  setStat('מכווץ תמונות…');
+  for(const file of files){
+    let blob; try{ blob = await compressImage(file); }catch(e){ blob = file; }
+    const key='p'+uid(); purls.set(key, URL.createObjectURL(blob)); idbSet(key,blob).catch(()=>{});
     if(t.type==='cover'){ if(state.meta.coverPhoto)removePhoto(state.meta.coverPhoto); state.meta.coverPhoto=key; }
     else if(t.type==='roof'){ findRoof(t.roof).roofPhotos.push({key,caption:''}); }
     else if(t.type==='finding'){ const r=findRoof(t.roof); findFinding(r,t.finding).photos.push({key,caption:''}); }
@@ -1193,8 +1272,8 @@ function onPhotos(files){
       const r=findRoof(t.roof); const f=findFinding(r,t.finding);
       if(f){ if(!f.fu) f.fu={status:'open',done:'',photos:[]}; if(!Array.isArray(f.fu.photos)) f.fu.photos=[];
              f.fu.photos.push({key,caption:''}); } }
-  });
-  _photoTarget=null; save(); render();
+  }
+  save(); render();
 }
 function removePhoto(key){ if(!key)return; const u=purls.get(key); if(u)URL.revokeObjectURL(u); purls.delete(key); idbDel(key).catch(()=>{}); }
 function deletePhotoEverywhere(key){
@@ -1523,6 +1602,20 @@ document.getElementById('libModal').addEventListener('click',e=>{
 });
 document.getElementById('libNew').onclick=newReport;
 document.getElementById('libClose').onclick=closeLibrary;
+/* v0.6 — כיווץ חד-פעמי. בלתי-הפיך, ולכן מאחורי אישור מפורש עם אזהרה על גיבוי.
+   בסוף טוענים מחדש: purls מחזיקה object-URLs של ה-blobs הישנים, ו-boot בונה אותם מחדש מה-IDB. */
+document.getElementById('libShrink').onclick=async function(){
+  if(!confirm('לכווץ את כל התמונות בכל הדוחות ל-1920 פיקסל?\n\nזו פעולה בלתי-הפיכה — האיכות המקורית לא חוזרת.\nוודא שיש לך גיבוי לפני שאתה ממשיך.')) return;
+  const btn=this; const old=btn.textContent; btn.disabled=true;
+  try{
+    const r=await compressAllPhotos((i,n)=>{ btn.textContent='מכווץ '+i+'/'+n; });
+    const mb=n=>(n/1048576).toFixed(1);
+    alert('הכיווץ הסתיים.\n\nתמונות שנסרקו: '+r.total+'\nכווצו בפועל: '+r.changed+
+          '\n\nלפני: '+mb(r.before)+'MB\nאחרי: '+mb(r.after)+'MB');
+    location.reload();
+  }catch(e){ alert('הכיווץ נכשל: '+((e&&e.message)||e)); }
+  finally{ btn.disabled=false; btn.textContent=old; setStat(''); }
+};
 
 /* toolbar */
 document.getElementById('btnLibrary').onclick=openLibrary;
@@ -1862,6 +1955,7 @@ async function cloudSignOut(){ if(!sb)return; try{ await sb.auth.signOut(); }cat
 async function loadActivePhotos(){
   for(const u of purls.values())URL.revokeObjectURL(u); purls.clear();
   try{ const keys=await idbKeys(); for(const k of keys){ const blob=await idbGet(k); if(blob)purls.set(k,URL.createObjectURL(blob)); } }catch(e){}
+  await syncUidFromStorage();   // v0.6 — נקודת-החנק היחידה שבה נטענות תמונות הדוח הפעיל
 }
 async function boot(){
   // v0.2 — כניסה מאפליקציית הביקורים. אור ביקש שמה-[+] שם אפשר יהיה "להוסיף דוח חדש
