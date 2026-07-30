@@ -188,12 +188,21 @@ body.preview .finding,body.preview .roof,body.preview .card{box-shadow:none}
 .fu-now-tag{display:block;background:var(--amber-l,#f6ecd7);color:var(--gold-d,#8a6524);padding:6px 12px;margin:0 0 8px;
   font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;
   -webkit-print-color-adjust:exact;print-color-adjust:exact}
+#rb-lb{position:fixed;inset:0;z-index:300;background:rgba(20,15,8,.92);display:none;
+  align-items:center;justify-content:center;padding:18px;cursor:zoom-out}
+#rb-lb.on{display:flex}
+#rb-lb iframe{width:min(96vw,900px);height:min(80vh,520px);border:0;border-radius:10px;background:#000}
+#rb-lb .rb-x{position:fixed;top:12px;left:14px;color:#fff;font-size:30px;cursor:pointer;
+  background:rgba(0,0,0,.4);border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center}
+.vid-play{cursor:pointer}
 .vids{display:flex;flex-direction:column;gap:6px;margin-top:8px}
 .vid-row{display:flex;align-items:center;gap:8px;background:#f4f1ea;border:1px solid var(--hairline);
   border-radius:9px;padding:6px 10px;font-size:12.5px}
 .vid-ic{color:var(--amber);font-size:13px}
 .vid-lbl{flex:1;color:var(--ink2);font-weight:600}
 .vid-open{color:var(--amber);font-weight:700;text-decoration:none}
+.fu-sec-orig{margin:0 0 10px}
+.fu-sec-now{border-radius:9px;margin:0 0 8px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 /* ממצא שנוסף בדוח-המשך ולא היה בדוח הראשון */
 .fu-newfinding{border-inline-start:3px solid #8a5a8f}
 .fu-new-tag{display:inline-block;background:#f2eaf3;color:#6d4472;border:1px solid #c9a9cd;
@@ -371,6 +380,9 @@ body.preview .finding,body.preview .roof,body.preview .card{box-shadow:none}
 </div>
 
 <div class="ac-drop no-print" id="acDrop" hidden></div>
+
+<!-- v0.5 — נגן-הסרטונים הפנימי של העורך (המקבילה של #shr-lb בדף-השיתוף) -->
+<div id="rb-lb" class="no-print"><span class="rb-x">✕</span><div id="rb-lb-c"></div></div>
 
 <div class="modal-overlay no-print" id="catModal">
   <div class="lib-modal">
@@ -622,6 +634,27 @@ function ensureShape(){ if(!state.meta)state.meta={}; if(!state.roofs)state.roof
   if(!state.sections||typeof state.sections!=='object')state.sections={};
   // v0.3 (FOLLOWUP) — `fu` נוצר **רק** בדוח-המשך. דוח בדיקה רגיל נשאר בלי השדה בכלל,
   // כדי שמסמכים קיימים לא יגדלו ולא ישתנו בכלל ע"י השדרוג הזה.
+  if(isFollowUp() && state.followUp && !state.followUp.secUpgraded){
+    // v0.5 — שדרוג חד-פעמי לדוח-המשך שנוצר לפני הסעיפים-המצוטטים (v0.3): שדה סיפורי
+    // שעדיין מחזיק העתק זהה למקור — מתרוקן (המקור נשאר מוצג בציטוט ובדוח הראשון עצמו).
+    // שדה שאור כבר שינה — לא נוגעים בו. אפס איבוד-מידע.
+    let _o=null; try{ _o = state.followUp.of ? loadDoc(state.followUp.of) : null; }catch(e){}
+    if(_o){
+      state.followUp.origSections = {
+        summary: JSON.parse(JSON.stringify(_o.summary||{})),
+        scope:   JSON.parse(JSON.stringify(_o.scope||{})),
+        asFound: _o.asFound||'',
+        generalRecs: (_o.generalRecs||[]).slice(),
+      };
+      const eq=(x,y)=>((x==null?'':String(x)).trim() === ((y==null?'':String(y)).trim()));
+      if(state.summary && eq(state.summary.headline,(_o.summary||{}).headline)) state.summary.headline='';
+      if(state.summary && eq(state.summary.generalState,(_o.summary||{}).generalState)) state.summary.generalState='';
+      if(state.scope && eq(state.scope.reason,(_o.scope||{}).reason)) state.scope.reason='';
+      if(eq(state.asFound,_o.asFound)) state.asFound='';
+      try{ if(JSON.stringify(state.generalRecs)===JSON.stringify(_o.generalRecs)) state.generalRecs=['']; }catch(e){}
+    }
+    state.followUp.secUpgraded = true;
+  }
   if(isFollowUp()){
     state.roofs.forEach(r => (r.findings||[]).forEach(f => {
       if(f.fuNew) return;                              // v0.4 — ממצא חדש: אין שכבת-מעקב
@@ -711,9 +744,16 @@ function videoStrip(list, path){
   (list||[]).forEach((v,i)=>{
     const k=_vidKind(v.url);
     const lbl = k==='youtube'?'YouTube' : k==='drive'?'Google Drive' : k==='gphotos'?'Google Photos':'קישור';
+    const emb=_vidEmbedUrl(v.url);
+    // v0.5 — "שיפתחו בנגן פנימי": Drive/YouTube נפתחים בנגן-חלון בתוך הדף — גם בעורך
+    // וגם בדף-השיתוף (אותו מבנה בדיוק, כל דף עם ה-overlay שלו). Google Photos חוסם
+    // הטמעה, ולכן הכפתור שלו אומר בכנות שייפתח בלשונית.
+    const open = emb
+      ? `<span class="vid-open vid-play" role="button" tabindex="0" data-embed="${esc(emb)}">צפה כאן</span>`
+      : `<a class="vid-open" href="${esc(v.url)}" target="_blank" rel="noopener" title="Google Photos לא מאפשר הטמעה">פתח בלשונית</a>`;
     h+=`<div class="vid-row"><span class="vid-ic">▶</span>
       <span class="vid-lbl">${esc(v.caption||('סרטון '+(i+1)))} · ${lbl}</span>
-      <a class="vid-open" href="${esc(v.url)}" target="_blank" rel="noopener">פתח</a>
+      ${open}
       <button class="mini del edit-only" data-action="delVideo" data-path="${path}" data-i="${i}">הסר</button></div>`;
   });
   h+=`<button class="mini edit-only" data-action="addVideo" data-path="${path}">+ סרטון (קישור)</button>`;
@@ -753,6 +793,35 @@ function renderFinding(roof, f, n){
     ${videoStrip(f.videos, base+'videos')}
     <div class="addbar edit-only"><button class="mini del" data-action="delFinding" data-roof="${roof.id}" data-finding="${f.id}">מחק ממצא</button></div>
   </div>`;
+}
+
+// v0.5 — אור: "שיהיה אפשרות בזמן עריכת הדוח החדש למלא את הסעיפים האלה מחדש, ושזה יופיע
+// לצד הסעיפים המקוריים — כמו שעשית בממצאים." אותו דפוס בדיוק, על הסעיפים הכלליים:
+// תקציר-מנהלים, הסיבה לפנייה, תיאור-כללי והמלצות — המקור מצוטט קפוא (פס אפור), ומתחתיו
+// השדות ריקים לכתיבה מחדש (פס זהב). המקור נקרא חי מהדוח הראשון (הוא קפוא ממילא), עם
+// snapshot כגיבוי למקרה שהדוח הראשון יימחק.
+let _fuOrigCache;
+function _fuOrigDoc(){
+  if(!isFollowUp()) return null;
+  if(_fuOrigCache!==undefined) return _fuOrigCache;
+  let d=null;
+  try{ d = state.followUp.of ? loadDoc(state.followUp.of) : null; }catch(e){}
+  if(!d && state.followUp.origSections) d = state.followUp.origSections;
+  _fuOrigCache = d || null;
+  return _fuOrigCache;
+}
+function fuSecQuote(key){
+  if(!isFollowUp()) return '';
+  const o=_fuOrigDoc(); if(!o) return '';
+  const rows=[];
+  const add=(lbl,v)=>{ v=(v==null?'':String(v)).trim(); if(v) rows.push(`<div class="flabel">${esc(lbl)}</div><div class="ed ro-quote">${esc(v)}</div>`); };
+  if(key==='summary'){ add('מצב כללי — כפי שנרשם אז',(o.summary||{}).generalState); add('הסיכום שניתן אז',(o.summary||{}).headline); }
+  else if(key==='scope'){ add('הסיבה לפנייה — אז',(o.scope||{}).reason); }
+  else if(key==='asFound'){ add('התיאור שנרשם אז', o.asFound); }
+  else if(key==='generalRecs'){ (o.generalRecs||[]).forEach((t,i)=>add('המלצה '+(i+1)+' — אז', t)); }
+  if(!rows.length) return '';
+  return `<div class="fu-orig fu-sec-orig"><div class="fu-orig-tag">מהדוח הראשון${state.followUp.refNo?' · '+esc(state.followUp.refNo):''}</div>${rows.join('')}</div>
+    <div class="fu-now-tag fu-sec-now">הדוח הנוכחי — למילוי מחדש</div>`;
 }
 
 // v0.3 (FOLLOWUP) — אותו ממצא, אחרי ביצוע. החלק העליון הוא ציטוט קפוא מהדוח הראשון
@@ -833,6 +902,7 @@ function countSev(){
 }
 
 function render(){
+  _fuOrigCache=undefined;   // v0.5 — המקור נטען מחדש אחרי החלפת-דוח
   pmap=numberPhotos();
   const m=state.meta;
   const c=countSev();
@@ -903,6 +973,7 @@ function render(){
   }
 
   const secSummary=secWrap('summary','תקציר מנהלים',{eyebrow:'סקירה',gold:true,body:`
+    ${fuSecQuote('summary')}
     <div class="card">
       <div class="flabel">מצב כללי</div>${ed('summary.generalState','תקין / טעון תיקון / קריטי')}
       <div class="flabel">סיכום והמלצה תמציתית</div>${ed('summary.headline','3-5 שורות: התמונה הכוללת וכיוון הפעולה המרכזי…','big')}
@@ -910,6 +981,7 @@ function render(){
     </div>`});
 
   const secScope=secWrap('scope','רקע, מטרה והיקף',{eyebrow:'מסגרת',gold:true,body:`
+    ${fuSecQuote('scope')}
     <div class="card">
       <div class="flabel">הסיבה לפנייה</div>${ed('scope.reason','נזילות / קבלת עבודה / בדיקה תקופתית…')}
       <div class="flabel">מטרת הדוח</div>${ed('scope.purpose','')}
@@ -928,6 +1000,7 @@ function render(){
     </div>`});
 
   const secAsFound=secWrap('asFound','תיאור כללי של הגגות',{eyebrow:'תיאור',sub:'תיאור עובדתי ונייטרלי של המצב הקיים — בלי הערכות בשלב זה.',body:`
+    ${fuSecQuote('asFound')}
     <div class="card">${ed('asFound','מבט-על על המבנה והגגות, סוגי הסיכוך, מערכת הניקוז ואלמנטי הפחחות הקיימים…','big')}</div>`});
 
   let roofs=''; state.roofs.forEach(r=>roofs+=renderRoof(r));
@@ -953,6 +1026,7 @@ function render(){
   state.generalRecs.forEach((t,idx)=>gr+=`<li><div class="li-body">${ed('generalRecs.'+idx,'המלצה כללית / תחזוקה מונעת…')}</div><button class="mini del edit-only" data-action="delGenRec" data-i="${idx}">מחק</button></li>`);
   gr+='</ul>';
   const secGen=secWrap('generalRecs','המלצות כלליות ותחזוקה מונעת',{eyebrow:'המשך',gold:true,body:`
+    ${fuSecQuote('generalRecs')}
     <div class="card">${gr}<div class="addbar edit-only"><button class="mini" data-action="addGenRec">+ הוסף המלצה</button></div></div>`});
 
   /* photo appendix */
@@ -1135,8 +1209,19 @@ async function startFollowUp(id){
   dup.meta.visitDate = '';                       // ביקור המעקב הוא תאריך אחר; אור ימלא
   // הטקסטים הכלליים של הדוח הראשון לא מתאימים למעקב — מתרוקנים כדי שייכתבו מחדש,
   // אבל **הממצאים נשארים במלואם**, כי הם כל העניין: הם הסעיפים שעליהם מדווחים.
-  if(dup.summary) dup.summary.generalState = '';
+  // v0.5 — המקור נשמר כ-snapshot (למקרה שהדוח הראשון יימחק) ומוצג מצוטט מעל כל סעיף,
+  // וכל השדות הסיפוריים מתרוקנים — אור ממלא אותם מחדש לביקור הנוכחי, כמו בממצאים.
+  dup.followUp.origSections = {
+    summary: JSON.parse(JSON.stringify(src.summary||{})),
+    scope:   JSON.parse(JSON.stringify(src.scope||{})),
+    asFound: src.asFound||'',
+    generalRecs: (src.generalRecs||[]).slice(),
+  };
+  dup.followUp.secUpgraded = true;
+  if(dup.summary){ dup.summary.generalState = ''; dup.summary.headline = ''; }
   if(dup.scope)   dup.scope.reason = '';
+  dup.asFound = '';
+  dup.generalRecs = [''];
   (dup.roofs||[]).forEach(r => (r.findings||[]).forEach(f => {
     delete f.demo;
     f.fu = { status:'open', done:'', photos:[] };
@@ -1185,6 +1270,19 @@ async function shareAsWebPage(){
   // ניקוי כלי-עריכה, והחלפת כל תמונה ב-data URL מלא (לא ה-thumb)
   clone.querySelectorAll('.edit-only,.no-print').forEach(el=>el.remove());
   clone.querySelectorAll('[contenteditable]').forEach(el=>el.removeAttribute('contenteditable'));
+  // v0.5 — אור: "שלא יהיה אפשר לשנות שום דבר בדף... כרגע אפשר לשנות סוג הגג". ה-select של
+  // סוג-הפנל אינו edit-only (הוא חלק מהמסמך), ולכן שרד את הניקוי כפקד חי. כל select הופך
+  // לטקסט של הערך הנבחר, וכל שאריות ה-data-* מוסרות. רשת-ביטחון: פקד שנשכח — נמחק.
+  clone.querySelectorAll('select').forEach(sel=>{
+    const d=document.createElement('div'); d.className='ed';
+    const opt=sel.selectedOptions&&sel.selectedOptions[0];
+    d.textContent=opt?opt.textContent:'';
+    sel.replaceWith(d);
+  });
+  clone.querySelectorAll('[data-action],[data-path],[data-sectoggle]').forEach(el=>{
+    el.removeAttribute('data-action'); el.removeAttribute('data-path'); el.removeAttribute('data-sectoggle');
+  });
+  clone.querySelectorAll('input,textarea,button').forEach(el=>el.remove());
   for(const img of clone.querySelectorAll('img')){
     // מזהים את התמונה לפי המפתח בכרטיס-האב
     const cell=img.closest('.ph');
@@ -1200,20 +1298,7 @@ async function shareAsWebPage(){
     img.classList.add('shr-zoom');
     img.setAttribute('title','לחץ להגדלה');
   }
-  // כרטיסי-סרטון: הופכים לכפתורי-הטמעה
-  clone.querySelectorAll('.vid-row').forEach(row=>{
-    const a=row.querySelector('.vid-open'); if(!a) return;
-    const url=a.getAttribute('href'); const embed=_vidEmbedUrl(url);
-    const lbl=row.querySelector('.vid-lbl'); const txt=lbl?lbl.textContent:'סרטון';
-    if(embed){
-      row.outerHTML=`<div class="vid-row shr-vid" data-embed="${esc(embed)}"><span class="vid-ic">▶</span>
-        <span class="vid-lbl">${esc(txt)}</span><span class="vid-open">צפה כאן</span></div>`;
-    } else {
-      row.outerHTML=`<div class="vid-row"><span class="vid-ic">▶</span>
-        <span class="vid-lbl">${esc(txt)} — ייפתח בלשונית נפרדת (Google Photos לא מאפשר הטמעה)</span>
-        <a class="vid-open" href="${esc(url)}" target="_blank" rel="noopener">פתח</a></div>`;
-    }
-  });
+  // v0.5 — כרטיסי-הסרטון כבר נבנים נכון ב-videoStrip (נגן פנימי גם בעורך); אין מה להמיר.
   // אוספים את כל ה-CSS של העמוד — העיצוב זהה אחד-לאחד
   let css=''; document.querySelectorAll('style').forEach(st=>css+=st.textContent+'\n');
   const title=(state.meta.title||'דוח')+' · '+(state.meta.refNo||'');
@@ -1232,10 +1317,15 @@ body{background:var(--paper,#f4f1ea)}
 #shr-lb iframe{width:min(96vw,900px);height:min(80vh,520px);border:0;border-radius:10px;background:#000}
 #shr-lb .shr-x{position:fixed;top:12px;left:14px;color:#fff;font-size:30px;cursor:pointer;
   background:rgba(0,0,0,.4);border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center}
+#shr-print{position:fixed;bottom:16px;left:16px;z-index:50;background:var(--amber,#c8963e);color:#fff;
+  border:0;border-radius:12px;padding:12px 18px;font-family:inherit;font-size:14px;font-weight:800;
+  cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.vid-play{cursor:pointer}
 .shr-vid .vid-open{cursor:pointer}
 @media print{.shr-zoom{cursor:default}}
 </style></head><body>
 ${clone.outerHTML}
+<button id="shr-print" class="no-print" title="שמור כ-PDF דרך חלון ההדפסה — התמונות יוצאות מוגדלות">ייצא PDF / הדפס</button>
 <div id="shr-lb"><span class="shr-x">✕</span><div id="shr-lb-c"></div></div>
 <script>
 (function(){
@@ -1243,14 +1333,14 @@ ${clone.outerHTML}
   function close(){ lb.classList.remove('on'); c.innerHTML=''; }
   lb.addEventListener('click',function(e){ if(e.target.tagName!=='IFRAME') close(); });
   document.addEventListener('keydown',function(e){ if(e.key==='Escape') close(); });
+  document.getElementById('shr-print').addEventListener('click',function(){ window.print(); });
   document.querySelectorAll('img.shr-zoom').forEach(function(img){
     img.addEventListener('click',function(){ c.innerHTML='<img src="'+img.src+'">'; lb.classList.add('on'); });
   });
-  document.querySelectorAll('.shr-vid').forEach(function(row){
-    row.addEventListener('click',function(){
-      c.innerHTML='<iframe src="'+row.getAttribute('data-embed')+'" allow="autoplay; fullscreen" allowfullscreen></iframe>';
-      lb.classList.add('on');
-    });
+  document.addEventListener('click',function(e){
+    var p=e.target.closest('.vid-play'); if(!p) return;
+    c.innerHTML='<iframe src="'+p.getAttribute('data-embed')+'" allow="autoplay; fullscreen" allowfullscreen></iframe>';
+    lb.classList.add('on');
   });
 })();
 <\/script></body></html>`;
@@ -1318,6 +1408,16 @@ document.getElementById('btnBackToApp').onclick=()=>{ try{ save(); }catch(e){}
   window.open('https://orperias-coder.github.io/Or-BaGag/', 'orBagagApp'); };
 document.getElementById('btnPrint').onclick=()=>window.print();
 document.getElementById('btnShareWeb').onclick=()=>{ shareAsWebPage().catch(e=>{ console.warn(e); setStat('שגיאה בבניית דף-השיתוף'); }); };
+// v0.5 — הנגן הפנימי בעורך: לחיצה על "צפה כאן" פותחת iframe בחלון-על, לא לשונית
+document.addEventListener('click',e=>{
+  const p=e.target.closest('.vid-play');
+  if(p){ document.getElementById('rb-lb-c').innerHTML='<iframe src="'+p.dataset.embed+'" allow="autoplay; fullscreen" allowfullscreen></iframe>';
+         document.getElementById('rb-lb').classList.add('on'); return; }
+  const lb=e.target.closest('#rb-lb');
+  if(lb && e.target.tagName!=='IFRAME'){ lb.classList.remove('on'); document.getElementById('rb-lb-c').innerHTML=''; }
+});
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ const lb=document.getElementById('rb-lb');
+  if(lb && lb.classList.contains('on')){ lb.classList.remove('on'); document.getElementById('rb-lb-c').innerHTML=''; } } });
 document.getElementById('btnPreview').onclick=()=>{ document.body.classList.toggle('preview');
   document.getElementById('btnPreview').textContent=document.body.classList.contains('preview')?'חזרה לעריכה':'תצוגה מקדימה'; };
 document.getElementById('btnNew').onclick=newReport;
