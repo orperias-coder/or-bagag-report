@@ -656,6 +656,19 @@ function ensureShape(){ if(!state.meta)state.meta={}; if(!state.roofs)state.roof
     state.followUp.secUpgraded = true;
   }
   if(isFollowUp()){
+    // v0.6 — אור הוסיף סעיף לדוח-ההמשך **לפני** שעדכון-"ממצא חדש" עלה, והסעיף נתקע
+    // כציטוט קפוא: בלי דגל fuNew הוא רונדר כאילו הגיע מהדוח הראשון — "אין לי אפשרות
+    // לערוך את הכותרת, אין אפשרות לעשות שום דבר". הזיהוי עכשיו אינו תלוי בדגל בלבד:
+    // ממצא שה-id שלו לא קיים בדוח הראשון — הוא בהגדרה חדש, ומסומן ונשמר ככזה.
+    _fuOrigCache = undefined;
+    const _orig = _fuOrigDoc();
+    if(_orig && Array.isArray(_orig.roofs)){
+      const _origIds = new Set();
+      _orig.roofs.forEach(r => (r.findings||[]).forEach(f => { if(f && f.id) _origIds.add(f.id); }));
+      state.roofs.forEach(r => (r.findings||[]).forEach(f => {
+        if(f && f.id && !f.fuNew && !_origIds.has(f.id)) f.fuNew = true;
+      }));
+    }
     state.roofs.forEach(r => (r.findings||[]).forEach(f => {
       if(f.fuNew) return;                              // v0.4 — ממצא חדש: אין שכבת-מעקב
       if(!f.fu || typeof f.fu !== 'object') f.fu = { status:'open', done:'', photos:[] };
@@ -855,6 +868,10 @@ function renderFindingFollowUp(roof, f, n, base){
       ${photoStrip(fu.photos, 'addFuPhoto', `data-roof="${roof.id}" data-finding="${f.id}"`)}
       ${videoStrip(fu.videos, base+'fu.videos')}
     </div>
+    ${/* v0.6 — אור: "אני רוצה למחוק סעיפים". המחיקה היא מדוח-ההמשך בלבד — הדוח הראשון
+         הוא מסמך נפרד ולא נוגעים בו. אותו handler של delFinding, שמשחרר גם את תמונות
+         ה"אחרי". */''}
+    <div class="addbar edit-only"><button class="mini del" data-action="delFinding" data-roof="${roof.id}" data-finding="${f.id}">מחק סעיף מדוח-ההמשך</button></div>
   </div>`;
 }
 
@@ -1097,7 +1114,7 @@ doc.addEventListener('click',e=>{
   else if(a==='delRoof'){ if(confirm('למחוק את הגג וכל הממצאים שבו?')){ const r=findRoof(b.dataset.roof); purgeRoofPhotos(r); state.roofs=state.roofs.filter(x=>x.id!==b.dataset.roof); save(); render(); } }
   else if(a==='addBlankFinding'){ addFinding(b.dataset.roof,'blank'); }
   else if(a==='openCatalog'){ openCatalog(b.dataset.roof); }
-  else if(a==='delFinding'){ if(confirm('למחוק ממצא זה?')){ const r=findRoof(b.dataset.roof); const f=findFinding(r,b.dataset.finding); if(f){f.photos.forEach(p=>removePhoto(p.key)); ((f.fu&&f.fu.photos)||[]).forEach(p=>removePhoto(p.key));}   /* v0.3 (FOLLOWUP) — אחרת תמונות ה"אחרי" נשארות ב-IDB */ r.findings=r.findings.filter(x=>x.id!==b.dataset.finding); save(); render(); } }
+  else if(a==='delFinding'){ if(confirm(isFollowUp() ? 'למחוק סעיף זה מדוח-ההמשך? הדוח הראשון לא ישתנה.' : 'למחוק ממצא זה?')){ const r=findRoof(b.dataset.roof); const f=findFinding(r,b.dataset.finding); if(f){f.photos.forEach(p=>removePhoto(p.key)); ((f.fu&&f.fu.photos)||[]).forEach(p=>removePhoto(p.key));}   /* v0.3 (FOLLOWUP) — אחרת תמונות ה"אחרי" נשארות ב-IDB */ r.findings=r.findings.filter(x=>x.id!==b.dataset.finding); save(); render(); } }
   else if(a==='addRoofPhoto'){ _photoTarget={type:'roof',roof:b.dataset.roof}; pickPhotos(); }
   else if(a==='addFindingPhoto'){ _photoTarget={type:'finding',roof:b.dataset.roof,finding:b.dataset.finding}; pickPhotos(); }
   else if(a==='addFuPhoto'){ _photoTarget={type:'fu',roof:b.dataset.roof,finding:b.dataset.finding}; pickPhotos(); }   // v0.3 (FOLLOWUP)
@@ -1610,7 +1627,9 @@ function applyAC(entry, ri, fi, field){ const r=state.roofs[ri]; if(!r)return; c
   bumpUses(entry); hideAC(); save(); render();
 }
 function addFindingFromEntry(roofId, entry){ const r=findRoof(roofId); if(!r)return;
-  r.findings.push({ id:'f'+uid(), element:entry.element||'', location:entry.location||'', description:entry.description||'', cause:entry.cause||'', standardRef:entry.standardRef||'', severity:entry.severity||'major', recommendation:entry.recommendation||'', urgency:entry.urgency||'', photos:[] });
+  const nf={ id:'f'+uid(), element:entry.element||'', location:entry.location||'', description:entry.description||'', cause:entry.cause||'', standardRef:entry.standardRef||'', severity:entry.severity||'major', recommendation:entry.recommendation||'', urgency:entry.urgency||'', photos:[] };
+  if(isFollowUp()) nf.fuNew=true;   // v0.6 — כמו addFinding: בדוח-המשך זה ממצא חדש, פתוח לעריכה
+  r.findings.push(nf);
   bumpUses(entry); save(); render(); closeCatalog(); }
 
 let _catRoof=null,_catItems=[];
