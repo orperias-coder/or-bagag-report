@@ -311,7 +311,8 @@ body.preview .finding,body.preview .roof,body.preview .card{box-shadow:none}
   <button class="btn" id="btnImportJson">שחזור ↑</button>
   <button class="btn ghost" id="btnAI">חיבור AI</button>
   <button class="btn ghost" id="btnNew">דוח חדש</button>
-  <button class="btn" id="btnShareWeb" title="קובץ HTML עם תמונות בגודל מלא וסרטונים מוטמעים">שתף כדף אינטרנט</button>
+  <button class="btn" id="btnShareWeb" title="קובץ HTML עם תמונות בגודל מלא וסרטונים מוטמעים">שתף כקובץ</button>
+  <button class="btn" id="btnShareLink" title="מעלה את הדוח לענן ונותן קישור קבוע לשליחה ללקוח">שתף כקישור</button>
   <button class="btn primary" id="btnPrint">ייצא PDF / הדפס</button>
 </div>
 
@@ -1297,8 +1298,7 @@ async function exportReport(id){
    ברזולוציה מלאה (data URL), לחיצה פותחת אותה על כל המסך בתוך הדף, וסרטוני
    Drive/YouTube נפתחים בחלון פנימי (iframe). שום דבר לא שולח את הלקוח החוצה —
    חוץ מ-Google Photos, שחוסם הטמעה, ועל הכרטיס שלו כתוב שייפתח בלשונית. */
-async function shareAsWebPage(){
-  setStat('בונה דף לשיתוף…');
+async function buildSharePageHtml(){
   const wasPreview=document.body.classList.contains('preview');
   document.body.classList.add('preview');            // המצב שבו רואים בדיוק את מה שהלקוח יראה
   render();
@@ -1381,11 +1381,94 @@ ${clone.outerHTML}
   });
 })();
 <\/script></body></html>`;
+  return html;
+}
+async function shareAsWebPage(){
+  setStat('בונה דף לשיתוף…');
+  const html=await buildSharePageHtml();
   const blob=new Blob([html],{type:'text/html'});
   const aEl=document.createElement('a'); aEl.href=URL.createObjectURL(blob);
   aEl.download=((state.meta.refNo||'דוח')+'').replace(/[\/\\:]+/g,'-')+'.html'; aEl.click();
   setTimeout(()=>URL.revokeObjectURL(aEl.href),3000);
   setStat('דף-השיתוף ירד — שלח את הקובץ ללקוח');
+}
+
+/* ═══ v0.9 — שיתוף כקישור. אור: "האם אפשר לשלוח כלינק ללקוח?"
+   הדף עולה ל-storage של פרויקט-הענן של אפליקציית-הביקורים (החי!), עם הסשן המשותף
+   על אותו origin (storageKey 'obv_sb_auth'). Supabase מגיש HTML כ-text/plain במכוון,
+   ולכן הקישור שנשלח הוא דרך view.html שלנו, שמושך ומציג. הקישור קבוע לכל דוח:
+   שיתוף חוזר מעדכן את התוכן באותו קישור. */
+const SB2_URL='https://wxnmujdcrqsgokzlptkh.supabase.co';
+const SB2_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind4bm11amRjcnFzZ29remxwdGtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMDE3ODMsImV4cCI6MjA5NjU3Nzc4M30.R84NdsvQi5tMSJC51k4SxeVK364JQL1eZau0r9_V_ew';
+const VIEWER_URL='https://orperias-coder.github.io/or-bagag-report/view.html';
+let _sb2=null;
+function _sb2Client(){
+  if(_sb2) return _sb2;
+  if(!window.supabase||!window.supabase.createClient) return null;
+  try{ _sb2=window.supabase.createClient(SB2_URL,SB2_ANON,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'obv_sb_auth'}}); }catch(e){}
+  return _sb2;
+}
+async function shareAsLink(){
+  const sb=_sb2Client();
+  if(!sb){ alert('ספריית הענן לא נטענה — בדוק חיבור לאינטרנט ורענן.'); return; }
+  let session=null;
+  try{ const r=await sb.auth.getSession(); session=r.data&&r.data.session; }catch(e){}
+  if(!session||!session.user){
+    alert('כדי לשתף כקישור צריך להיות מחובר לענן.\n\nפתח את אפליקציית אור בגג (כפתור "→ אור בגג") → הגדרות → סנכרון בענן → התחבר, וחזור לכאן.');
+    return;
+  }
+  setStat('בונה ומעלה את הדוח…');
+  try{
+    const html=await buildSharePageHtml();
+    const uid2=session.user.id;
+    const objPath=uid2+'/reports-html/rpt-'+_activeId+'.html';
+    const up=await sb.storage.from('media').upload(objPath, new Blob([html],{type:'text/html'}), {upsert:true, contentType:'text/html'});
+    if(up.error) throw up.error;
+    // קישור קבוע: נוצר פעם אחת (תוקף 10 שנים) ונשמר על הדוח; העלאה חוזרת לאותו
+    // נתיב מעדכנת את מה שהקישור מציג.
+    let link=(state.meta&&state.meta.shareLink)||'';
+    // דוח משוכפל / דוח-המשך / מיובא יורש meta מהמקור — כולל shareLink של דוח אחר.
+    // הקישור תקף רק אם הוא מצביע על הנתיב של הדוח *הזה*; אחרת נוצר חדש.
+    if(link && link.indexOf('rpt-'+_activeId+'.html')===-1) link='';
+    if(!link){
+      const sg=await sb.storage.from('media').createSignedUrl(objPath, 315360000);
+      if(sg.error||!sg.data||!sg.data.signedUrl) throw (sg.error||new Error('sign failed'));
+      link=VIEWER_URL+'#u='+encodeURIComponent(sg.data.signedUrl);
+      state.meta.shareLink=link; save();
+    }
+    try{ await navigator.clipboard.writeText(link); }catch(e){}
+    setStat('הקישור מוכן');
+    _showShareLink(link);
+  }catch(e){
+    console.warn('[shareAsLink]',e);
+    setStat('שגיאה בשיתוף');
+    alert('השיתוף נכשל: '+((e&&e.message)||e)+'\nבדוק חיבור לאינטרנט ונסה שוב.');
+  }
+}
+function _showShareLink(link){
+  let ov=document.getElementById('shareLinkModal');
+  if(ov) ov.remove();
+  ov=document.createElement('div');
+  ov.id='shareLinkModal'; ov.className='modal-overlay open no-print';
+  ov.innerHTML=`<div class="lib-modal" style="max-width:560px">
+    <div class="lib-head"><div class="sk-title">קישור לדוח</div><button class="btn ghost" id="slClose">סגור</button></div>
+    <div style="padding:14px 16px">
+      <p style="font-size:13.5px;color:#5d5344;line-height:1.6;margin:0 0 10px">
+        הקישור הועתק. הוא <b>קבוע לדוח הזה</b> — אם תערוך ותשתף שוב, אותו קישור יציג את הגרסה המעודכנת.
+        כל מי שיש לו את הקישור יכול לצפות.</p>
+      <textarea readonly id="slText" style="width:100%;box-sizing:border-box;height:74px;font-size:12px;direction:ltr;
+        border:1px solid #d8d2c8;border-radius:9px;padding:8px;font-family:monospace">${esc(link)}</textarea>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <button class="btn primary" id="slCopy">העתק שוב</button>
+        <a class="btn" href="https://wa.me/?text=${encodeURIComponent(link)}" target="_blank" rel="noopener">שלח בוואטסאפ</a>
+        <a class="btn ghost" href="${esc(link)}" target="_blank" rel="noopener">פתח לבדיקה</a>
+      </div>
+    </div></div>`;
+  document.body.appendChild(ov);
+  document.getElementById('slClose').onclick=()=>ov.remove();
+  ov.addEventListener('click',e=>{ if(e.target===ov) ov.remove(); });
+  document.getElementById('slCopy').onclick=()=>{ const t=document.getElementById('slText'); t.select();
+    try{ navigator.clipboard.writeText(t.value); }catch(e){ document.execCommand('copy'); } };
 }
 
 function importReport(){ const jp=document.getElementById('jsonPick');
@@ -1445,6 +1528,7 @@ document.getElementById('btnBackToApp').onclick=()=>{ try{ save(); }catch(e){}
   window.open('https://orperias-coder.github.io/Or-BaGag/', 'orBagagApp'); };
 document.getElementById('btnPrint').onclick=()=>window.print();
 document.getElementById('btnShareWeb').onclick=()=>{ shareAsWebPage().catch(e=>{ console.warn(e); setStat('שגיאה בבניית דף-השיתוף'); }); };
+document.getElementById('btnShareLink').onclick=()=>{ shareAsLink(); };
 // v0.5 — הנגן הפנימי בעורך: לחיצה על "צפה כאן" פותחת iframe בחלון-על, לא לשונית
 document.addEventListener('click',e=>{
   const p=e.target.closest('.vid-play');

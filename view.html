@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>אור בגג · דוח</title>
+<style>
+  body{margin:0;font-family:-apple-system,'Heebo',sans-serif;background:#f4f1ea;color:#2a1f12;
+       display:flex;align-items:center;justify-content:center;min-height:100vh}
+  .ld{text-align:center;padding:24px}
+  .ld .sun{width:38px;height:38px;border-radius:50%;background:#c8963e;margin:0 auto 14px;
+       animation:pulse 1.2s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:.45;transform:scale(.92)}50%{opacity:1;transform:scale(1)}}
+  .ld h1{font-size:17px;margin:0 0 6px}
+  .ld p{font-size:13.5px;color:#7a6f5e;margin:0;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="ld" id="ld">
+  <div class="sun"></div>
+  <h1>אור בגג</h1>
+  <p>טוען את הדוח…</p>
+</div>
+<script>
+/* view.html — דף-הצפייה של דוחות אור-בגג.
+   Supabase מגיש HTML בכוונה כ-text/plain (הגנה מפישינג על הדומיין שלהם), ולכן קישור
+   ישיר לקובץ מציג קוד. הדף הזה, שיושב על הדומיין שלנו, מושך את תוכן-הדוח מהקישור
+   החתום ומציג אותו — כולל הלייטבוקס ונגן-הסרטונים שבתוכו (document.write מריץ סקריפטים).
+   אבטחה: נטענים אך ורק קבצים מה-storage של הפרויקט של אור — שום כתובת אחרת. */
+(async function(){
+  var ld=document.getElementById('ld');
+  function fail(msg){ ld.innerHTML='<div class="sun" style="animation:none;opacity:.4"></div><h1>הדוח לא נטען</h1><p>'+msg+'</p>'; }
+  var m=location.hash.match(/^#u=(.+)$/);
+  if(!m){ fail('הקישור חסר או שבור. בקש קישור חדש משולח הדוח.'); return; }
+  var url;
+  try{ url=decodeURIComponent(m[1]); }catch(e){ fail('הקישור פגום.'); return; }
+  var ALLOWED='https://wxnmujdcrqsgokzlptkh.supabase.co/storage/v1/object/sign/media/';
+  if(url.indexOf(ALLOWED)!==0){ fail('קישור לא מזוהה.'); return; }
+  try{
+    var r=await fetch(url);
+    if(!r.ok){ fail(r.status===400||r.status===403
+      ? 'תוקף הקישור פג או שהדוח הוסר. בקש קישור חדש משולח הדוח.'
+      : 'שגיאה בטעינה ('+r.status+'). נסה שוב בעוד רגע.'); return; }
+    var html=await r.text();
+    document.open(); document.write(html); document.close();
+  }catch(e){ fail('אין חיבור לאינטרנט, או שהשרת לא זמין. נסה שוב.'); }
+})();
+</script>
+</body>
+</html>
