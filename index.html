@@ -170,13 +170,35 @@ body.preview .finding,body.preview .roof,body.preview .card{box-shadow:none}
 .fu-finding.fu-done{border-inline-start-color:#6b8f6b}
 .fu-finding.fu-partial{border-inline-start-color:#cf8f18}
 .fu-finding.fu-notdone{border-inline-start-color:#a64030}
-.fu-orig{background:rgba(0,0,0,.025);border:1px solid var(--stone-d);border-radius:10px;
-  padding:10px 12px;margin:8px 0}
-.fu-orig-tag,.fu-now-tag{font-size:10.5px;font-weight:800;letter-spacing:.4px;
-  text-transform:uppercase;color:var(--ink3);margin-bottom:6px}
+/* v0.4 — אור: "שיהיה ממש בצורה ברורה מה היה כתוב בדוח המקורי ומה כתוב בדוח החדש...
+   צריך לחדד את ההבדלים." שני הבלוקים מקבלים כותרת-פס מלאה במקום תווית קטנה: הציטוט
+   על פס אפור-אבן עם קו-צד אפור, וה"אחרי" על פס זהב עם קו-צד זהב. print-color-adjust
+   נדרש כדי שהפסים ייצאו גם בהדפסה — בלעדיו ההבחנה הייתה נעלמת בדיוק במסמך שהלקוח מקבל. */
+.fu-orig{background:rgba(0,0,0,.025);border:1px solid var(--stone-d);border-inline-start:4px solid #b9b2a6;
+  border-radius:10px;padding:0 0 10px;margin:8px 0;overflow:hidden}
+.fu-orig>*:not(.fu-orig-tag){margin-inline:12px}
+.fu-orig-tag{display:block;background:#eceae5;color:#6d675e;padding:6px 12px;margin:0 0 8px;
+  font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;
+  -webkit-print-color-adjust:exact;print-color-adjust:exact}
+.fu-orig .ro-quote{color:#55504a}
 .fu-orig-sev{font-size:12px;color:var(--ink3);margin-top:6px}
-.fu-now{border:1.5px solid var(--gold,#c8a24a);border-radius:10px;padding:10px 12px;margin:8px 0}
-.fu-now-tag{color:var(--gold-d,#8a6524)}
+.fu-now{border:1.5px solid var(--gold,#c8a24a);border-inline-start:4px solid var(--gold,#c8a24a);
+  border-radius:10px;padding:0 0 10px;margin:8px 0;overflow:hidden}
+.fu-now>*:not(.fu-now-tag){margin-inline:12px}
+.fu-now-tag{display:block;background:var(--amber-l,#f6ecd7);color:var(--gold-d,#8a6524);padding:6px 12px;margin:0 0 8px;
+  font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;
+  -webkit-print-color-adjust:exact;print-color-adjust:exact}
+.vids{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.vid-row{display:flex;align-items:center;gap:8px;background:#f4f1ea;border:1px solid var(--hairline);
+  border-radius:9px;padding:6px 10px;font-size:12.5px}
+.vid-ic{color:var(--amber);font-size:13px}
+.vid-lbl{flex:1;color:var(--ink2);font-weight:600}
+.vid-open{color:var(--amber);font-weight:700;text-decoration:none}
+/* ממצא שנוסף בדוח-המשך ולא היה בדוח הראשון */
+.fu-newfinding{border-inline-start:3px solid #8a5a8f}
+.fu-new-tag{display:inline-block;background:#f2eaf3;color:#6d4472;border:1px solid #c9a9cd;
+  font-size:10.5px;font-weight:800;border-radius:999px;padding:2px 9px;
+  -webkit-print-color-adjust:exact;print-color-adjust:exact}
 .fu-ref{font-size:13px;line-height:1.6;color:var(--ink2);margin-bottom:10px}
 .libfu-tag{display:inline-block;background:var(--stone-d);color:var(--ink2);font-size:10px;
   font-weight:800;border-radius:999px;padding:1px 7px;vertical-align:1px}
@@ -191,6 +213,14 @@ body.preview .finding,body.preview .roof,body.preview .card{box-shadow:none}
   .ed:empty:before{content:''}
   select.ed{background:none!important;border:none!important;appearance:none;padding:0!important}
   .sec,.card,.roof,.finding,.legrow,.ph,.mrow,.charrow{break-inside:avoid}
+  /* v0.4 — אור: "מסגרת חצי שקופה מוזרה על התמונות" בייצוא. זה ה-box-shadow: .doc מקבל
+     box-shadow:none בהדפסה, אבל כרטיסי-התמונה לא — ו-Chrome מדפיס את הצל כהילה אפורה
+     חצי-שקופה סביב כל תמונה. וגם: "להציג את התמונות קצת יותר גדולות" — 148px היה קטן
+     מכדי לראות ממצא; בהדפסה התמונות כמעט מוכפלות. */
+  .ph,.cover-photo,.card{box-shadow:none!important}
+  .ph{width:236px;border-color:#d8d2c8}
+  .ph img{height:172px}
+  .cover-photo{box-shadow:none!important}
   .sec{margin-top:20px}
   .roof{margin-bottom:14px}
   .print-footer{display:block;position:fixed;bottom:4mm;left:0;right:0;text-align:center;font-size:9.5px;color:#666;border-top:1px solid #ddd;padding-top:3px}
@@ -260,6 +290,9 @@ body.preview .finding,body.preview .roof,body.preview .card{box-shadow:none}
 <body>
 
 <div class="toolbar no-print">
+  <!-- v0.4 — אור: "אני לא רואה אפשרות לחזור מבונה-הדוח לאפליקציה של אור בגג."
+       אם האפליקציה פתוחה בלשונית אחרת — עוברים אליה; אחרת נפתחת חדשה. -->
+  <button class="btn ghost" id="btnBackToApp" title="חזרה לאפליקציית אור בגג">→ אור בגג</button>
   <div class="brand"><span class="sun"></span> אור בגג · בונה דוח</div>
   <span class="savestat" id="savestat">נשמר</span>
   <button class="btn ghost" id="btnCloud">ענן</button>
@@ -269,6 +302,7 @@ body.preview .finding,body.preview .roof,body.preview .card{box-shadow:none}
   <button class="btn" id="btnImportJson">שחזור ↑</button>
   <button class="btn ghost" id="btnAI">חיבור AI</button>
   <button class="btn ghost" id="btnNew">דוח חדש</button>
+  <button class="btn" id="btnShareWeb" title="קובץ HTML עם תמונות בגודל מלא וסרטונים מוטמעים">שתף כדף אינטרנט</button>
   <button class="btn primary" id="btnPrint">ייצא PDF / הדפס</button>
 </div>
 
@@ -590,6 +624,7 @@ function ensureShape(){ if(!state.meta)state.meta={}; if(!state.roofs)state.roof
   // כדי שמסמכים קיימים לא יגדלו ולא ישתנו בכלל ע"י השדרוג הזה.
   if(isFollowUp()){
     state.roofs.forEach(r => (r.findings||[]).forEach(f => {
+      if(f.fuNew) return;                              // v0.4 — ממצא חדש: אין שכבת-מעקב
       if(!f.fu || typeof f.fu !== 'object') f.fu = { status:'open', done:'', photos:[] };
       if(!Array.isArray(f.fu.photos)) f.fu.photos = [];
       if(!FU[f.fu.status]) f.fu.status = 'open';
@@ -621,8 +656,10 @@ function selFu(path, cur){
 }
 function fuBadge(k){ const x=FU[k]||FU.open; return `<span class="badge" style="background:${x.c}"><span class="dot" style="background:#fff"></span>${esc(x.l)}</span>`; }
 function countFu(){
-  const c={done:0,partial:0,notdone:0,na:0,open:0};
-  state.roofs.forEach(r => (r.findings||[]).forEach(f => { const k=(f.fu&&f.fu.status)||'open'; if(c[k]!=null)c[k]++; }));
+  const c={done:0,partial:0,notdone:0,na:0,open:0,newFound:0};
+  state.roofs.forEach(r => (r.findings||[]).forEach(f => {
+    if(f.fuNew){ c.newFound++; return; }               // v0.4 — ממצא חדש: אין לו סטטוס-ביצוע
+    const k=(f.fu&&f.fu.status)||'open'; if(c[k]!=null)c[k]++; }));
   return c;
 }
 function mrow(lbl,path,ph){ return `<div class="mrow"><div class="lbl">${lbl}</div><div class="val">${ed(path,ph)}</div></div>`; }
@@ -653,6 +690,37 @@ function photoCell(p){
       <button class="pdel edit-only" data-action="delPhoto" data-key="${p.key}">${p.sketch?'הסר שרטוט':'הסר תמונה'}</button>
     </div></div>`;
 }
+// v0.4 — אור: "להוסיף סרטונים, אפילו רק קישורים ל-Google Drive או Google Photos."
+// קישור לסרטון נשמר על הממצא (או על בלוק-ה"אחרי" בדוח-המשך). בעורך — שורה פשוטה;
+// בדף-האינטרנט המשותף — Drive/YouTube נפתחים **בתוך** הדף (iframe); Google Photos לא
+// מאפשר הטמעה (חוסם iframe) ולכן ייפתח בלשונית — נאמר על הכרטיס עצמו.
+function _vidKind(url){
+  if(/youtu\.be\/|youtube\.com\/watch|youtube\.com\/shorts/.test(url)) return 'youtube';
+  if(/drive\.google\.com\/file\/d\//.test(url)) return 'drive';
+  if(/photos\.google\.com|photos\.app\.goo\.gl/.test(url)) return 'gphotos';
+  return 'other';
+}
+function _vidEmbedUrl(url){
+  const k=_vidKind(url);
+  if(k==='youtube'){ const m=url.match(/(?:youtu\.be\/|v=|shorts\/)([\w-]{6,})/); return m?('https://www.youtube.com/embed/'+m[1]):null; }
+  if(k==='drive'){ const m=url.match(/\/file\/d\/([\w-]+)/); return m?('https://drive.google.com/file/d/'+m[1]+'/preview'):null; }
+  return null;   // gphotos ואחרים — אין הטמעה
+}
+function videoStrip(list, path){
+  let h='<div class="vids">';
+  (list||[]).forEach((v,i)=>{
+    const k=_vidKind(v.url);
+    const lbl = k==='youtube'?'YouTube' : k==='drive'?'Google Drive' : k==='gphotos'?'Google Photos':'קישור';
+    h+=`<div class="vid-row"><span class="vid-ic">▶</span>
+      <span class="vid-lbl">${esc(v.caption||('סרטון '+(i+1)))} · ${lbl}</span>
+      <a class="vid-open" href="${esc(v.url)}" target="_blank" rel="noopener">פתח</a>
+      <button class="mini del edit-only" data-action="delVideo" data-path="${path}" data-i="${i}">הסר</button></div>`;
+  });
+  h+=`<button class="mini edit-only" data-action="addVideo" data-path="${path}">+ סרטון (קישור)</button>`;
+  h+='</div>';
+  return h;
+}
+
 function photoStrip(list, addAction, addAttrs){
   let h='<div class="photos">';
   list.forEach(p=>h+=photoCell(p));
@@ -665,11 +733,12 @@ function photoStrip(list, addAction, addAttrs){
 function renderFinding(roof, f, n){
   const i=roofIdx(roof.id); const j=roof.findings.indexOf(f);
   const base='roofs.'+i+'.findings.'+j+'.';
-  if(isFollowUp()) return renderFindingFollowUp(roof, f, n, base);
-  return `<div class="finding">
+  if(isFollowUp() && !f.fuNew) return renderFindingFollowUp(roof, f, n, base);
+  return `<div class="finding${f.fuNew?' fu-newfinding':''}">
     <div class="finding-head">
       <span class="fnum">${n}</span>
       <div class="fhgrow">${ed(base+'element','אלמנט / פרט (לדוגמה: מפגש קיר)','big')}</div>
+      ${f.fuNew?'<span class="fu-new-tag">ממצא חדש — נצפה בביקור הנוכחי</span>':''}
       ${f.demo?'<span class="demo-tag edit-only">דוגמה</span>':''}
       ${badge(f.severity)}
     </div>
@@ -681,6 +750,7 @@ function renderFinding(roof, f, n){
     <div class="flabel">המלצה ופרט ביצוע</div>${ed(base+'recommendation','הפתרון המומלץ והפרט הנכון…')}
     <div class="flabel">דחיפות</div>${ed(base+'urgency','מתי לבצע…')}
     ${photoStrip(f.photos, 'addFindingPhoto', `data-roof="${roof.id}" data-finding="${f.id}"`)}
+    ${videoStrip(f.videos, base+'videos')}
     <div class="addbar edit-only"><button class="mini del" data-action="delFinding" data-roof="${roof.id}" data-finding="${f.id}">מחק ממצא</button></div>
   </div>`;
 }
@@ -699,7 +769,7 @@ function renderFindingFollowUp(roof, f, n, base){
     </div>
 
     <div class="fu-orig">
-      <div class="fu-orig-tag">מהדוח הראשון${state.followUp && state.followUp.refNo ? ' · ' + esc(state.followUp.refNo) : ''}</div>
+      <div class="fu-orig-tag">מהדוח הראשון${state.followUp && state.followUp.refNo ? ' · ' + esc(state.followUp.refNo) : ''}${state.followUp && state.followUp.date ? ' · ' + esc(state.followUp.date) : ''}</div>
       <div class="flabel">מיקום מדויק</div>${ro(base+'location')}
       <div class="flabel">הממצא שנרשם אז</div>${ro(base+'description')}
       <div class="flabel">ההמלצה שניתנה</div>${ro(base+'recommendation')}
@@ -709,11 +779,12 @@ function renderFindingFollowUp(roof, f, n, base){
     </div>
 
     <div class="fu-now">
-      <div class="fu-now-tag">אחרי ביצוע</div>
+      <div class="fu-now-tag">אחרי ביצוע — הביקור הנוכחי${state.meta && state.meta.visitDate ? ' · ' + esc(state.meta.visitDate) : ''}</div>
       <div class="flabel edit-only">מה מצב הסעיף</div>
       <div class="edit-only">${selFu(base+'fu.status', st)}</div>
       <div class="flabel">מה בוצע בפועל</div>${ed(base+'fu.done','מה נעשה, איך, ובמה — ומה נשאר פתוח אם נשאר…')}
       ${photoStrip(fu.photos, 'addFuPhoto', `data-roof="${roof.id}" data-finding="${f.id}"`)}
+      ${videoStrip(fu.videos, base+'fu.videos')}
     </div>
   </div>`;
 }
@@ -749,7 +820,7 @@ function renderRoof(roof){
       ${findings||'<div class="hint">אין ממצאים עדיין — הוסף ממצא מהרשימה למטה.</div>'}
       <div class="addbar edit-only">
         <button class="mini" data-action="openCatalog" data-roof="${roof.id}">+ ממצא מהקטלוג</button>
-        <button class="mini" data-action="addBlankFinding" data-roof="${roof.id}">+ ממצא ריק</button>
+        <button class="mini" data-action="addBlankFinding" data-roof="${roof.id}">${isFollowUp()?'+ ממצא חדש (לא היה בדוח הראשון)':'+ ממצא ריק'}</button>
       </div>
     </div>
   </div>`;
@@ -817,6 +888,7 @@ function render(){
     const fc=countFu();
     let fchips='<div class="chips">';
     ['done','partial','notdone','na','open'].forEach(k=>{ if(fc[k]) fchips+=`<div class="chip"><span class="dot" style="background:${FU[k].c}"></span><span class="cnt">${fc[k]}</span> ${esc(FU[k].l)}</div>`; });
+    if(fc.newFound) fchips+=`<div class="chip"><span class="dot" style="background:#8a5a8f"></span><span class="cnt">${fc.newFound}</span> ממצאים חדשים</div>`;
     fchips+='</div>';
     const fu=state.followUp||{};
     const link=[fu.refNo?('מס׳ '+esc(fu.refNo)):'', fu.date?('מתאריך '+esc(fu.date)):''].filter(Boolean).join(' · ');
@@ -959,6 +1031,13 @@ doc.addEventListener('click',e=>{
   else if(a==='addCover'){ _photoTarget={type:'cover'}; pickPhotos(true); }
   else if(a==='delCover'){ removePhoto(state.meta.coverPhoto); state.meta.coverPhoto=null; save(); render(); }
   else if(a==='delPhoto'){ deletePhotoEverywhere(b.dataset.key); save(); render(); }
+  else if(a==='addVideo'){   // v0.4
+    const url=(prompt('הדבק קישור לסרטון (Google Drive / YouTube / Google Photos):')||'').trim();
+    if(url){ if(!/^https:\/\//.test(url)){ alert('קישור לא תקין — חייב להתחיל ב-https://'); }
+      else { const cap=(prompt('שם קצר לסרטון (לא חובה):')||'').trim();
+             const arr=getPath(state,b.dataset.path)||[]; arr.push({url,caption:cap}); setPath(state,b.dataset.path,arr); save(); render(); } } }
+  else if(a==='delVideo'){   // v0.4
+    const arr=getPath(state,b.dataset.path)||[]; arr.splice(+b.dataset.i,1); save(); render(); }
   else if(a==='addGenRec'){ state.generalRecs.push(''); save(); render(); }
   else if(a==='delGenRec'){ state.generalRecs.splice(+b.dataset.i,1); if(!state.generalRecs.length)state.generalRecs.push(''); save(); render(); }
   else if(a==='addDisc'){ state.disclaimers.push(''); save(); render(); }
@@ -968,6 +1047,10 @@ doc.addEventListener('click',e=>{
 function addFinding(roofId, kind){
   const r=findRoof(roofId); if(!r)return;
   let f={ id:'f'+uid(), element:'', location:'', description:'', cause:'', standardRef:'', severity:'major', recommendation:'', urgency:'', photos:[] };
+  // v0.4 — אור: "נוספו עוד ממצאים שלא היו קיימים בדוח הראשון ואני רוצה להוסיף אותם...
+  // בהקשר של גג מסוים." ממצא שנולד בתוך דוח-המשך מסומן כחדש: אין לו "מהדוח הראשון"
+  // לצטט, ולכן הוא מוצג כממצא רגיל לעריכה, עם תגית שאומרת ללקוח שהוא נצפה בביקור הנוכחי.
+  if(isFollowUp()) f.fuNew = true;
   if(kind && kind!=='blank'){ const d=DETAILS.find(x=>x.k===kind); if(d){ f.element=d.name; f.cause=d.fails; f.recommendation=d.rec; f.standardRef='ת״י 1556'; } }
   r.findings.push(f); save(); render();
 }
@@ -1085,6 +1168,99 @@ async function exportReport(id){
   a.download=(((st.meta&&st.meta.refNo)||'דוח')+'').replace(/[\/\\:]+/g,'-')+'.json'; a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),2000); setStat('נשמר');
 }
+/* ═══════════════════════════════════════════════════════════════════
+   v0.4 — שיתוף כדף-אינטרנט. אור: "לשלוח את הדוח כדף אינטרנט שאפשר לפתוח את התמונות
+   כתמונות מלאות בגדול... וגם סרטונים... שהכל יהיה פנימי ומוצג יפה."
+   קובץ HTML אחד, עצמאי לגמרי: העיצוב של הדוח מועתק כמו-שהוא, כל תמונה מוטמעת
+   ברזולוציה מלאה (data URL), לחיצה פותחת אותה על כל המסך בתוך הדף, וסרטוני
+   Drive/YouTube נפתחים בחלון פנימי (iframe). שום דבר לא שולח את הלקוח החוצה —
+   חוץ מ-Google Photos, שחוסם הטמעה, ועל הכרטיס שלו כתוב שייפתח בלשונית. */
+async function shareAsWebPage(){
+  setStat('בונה דף לשיתוף…');
+  const wasPreview=document.body.classList.contains('preview');
+  document.body.classList.add('preview');            // המצב שבו רואים בדיוק את מה שהלקוח יראה
+  render();
+  const clone=document.getElementById('doc').cloneNode(true);
+  document.body.classList.toggle('preview', wasPreview); render();
+  // ניקוי כלי-עריכה, והחלפת כל תמונה ב-data URL מלא (לא ה-thumb)
+  clone.querySelectorAll('.edit-only,.no-print').forEach(el=>el.remove());
+  clone.querySelectorAll('[contenteditable]').forEach(el=>el.removeAttribute('contenteditable'));
+  for(const img of clone.querySelectorAll('img')){
+    // מזהים את התמונה לפי המפתח בכרטיס-האב
+    const cell=img.closest('.ph');
+    let key=null;
+    if(cell){ const del=cell.querySelector('[data-key]'); key=del&&del.dataset.key; }
+    if(!key){ // תמונת-שער וכד' — לפי ה-blob URL הנוכחי מול purls
+      for(const [k,u] of purls){ if(u===img.src){ key=k; break; } }
+    }
+    if(key){
+      try{ const blob=await idbGetFor(_activeId,key);
+           if(blob) img.src=await blobToDataURL(blob); }catch(e){}
+    }
+    img.classList.add('shr-zoom');
+    img.setAttribute('title','לחץ להגדלה');
+  }
+  // כרטיסי-סרטון: הופכים לכפתורי-הטמעה
+  clone.querySelectorAll('.vid-row').forEach(row=>{
+    const a=row.querySelector('.vid-open'); if(!a) return;
+    const url=a.getAttribute('href'); const embed=_vidEmbedUrl(url);
+    const lbl=row.querySelector('.vid-lbl'); const txt=lbl?lbl.textContent:'סרטון';
+    if(embed){
+      row.outerHTML=`<div class="vid-row shr-vid" data-embed="${esc(embed)}"><span class="vid-ic">▶</span>
+        <span class="vid-lbl">${esc(txt)}</span><span class="vid-open">צפה כאן</span></div>`;
+    } else {
+      row.outerHTML=`<div class="vid-row"><span class="vid-ic">▶</span>
+        <span class="vid-lbl">${esc(txt)} — ייפתח בלשונית נפרדת (Google Photos לא מאפשר הטמעה)</span>
+        <a class="vid-open" href="${esc(url)}" target="_blank" rel="noopener">פתח</a></div>`;
+    }
+  });
+  // אוספים את כל ה-CSS של העמוד — העיצוב זהה אחד-לאחד
+  let css=''; document.querySelectorAll('style').forEach(st=>css+=st.textContent+'\n');
+  const title=(state.meta.title||'דוח')+' · '+(state.meta.refNo||'');
+  const html=`<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(title)}</title>
+<style>${css}
+/* share-page only */
+body{background:var(--paper,#f4f1ea)}
+.doc{margin:14px auto;max-width:820px}
+.shr-zoom{cursor:zoom-in}
+#shr-lb{position:fixed;inset:0;z-index:999;background:rgba(20,15,8,.92);display:none;
+  align-items:center;justify-content:center;padding:18px;cursor:zoom-out}
+#shr-lb.on{display:flex}
+#shr-lb img{max-width:96vw;max-height:92vh;width:auto;height:auto;object-fit:contain;border-radius:8px}
+#shr-lb iframe{width:min(96vw,900px);height:min(80vh,520px);border:0;border-radius:10px;background:#000}
+#shr-lb .shr-x{position:fixed;top:12px;left:14px;color:#fff;font-size:30px;cursor:pointer;
+  background:rgba(0,0,0,.4);border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center}
+.shr-vid .vid-open{cursor:pointer}
+@media print{.shr-zoom{cursor:default}}
+</style></head><body>
+${clone.outerHTML}
+<div id="shr-lb"><span class="shr-x">✕</span><div id="shr-lb-c"></div></div>
+<script>
+(function(){
+  var lb=document.getElementById('shr-lb'), c=document.getElementById('shr-lb-c');
+  function close(){ lb.classList.remove('on'); c.innerHTML=''; }
+  lb.addEventListener('click',function(e){ if(e.target.tagName!=='IFRAME') close(); });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape') close(); });
+  document.querySelectorAll('img.shr-zoom').forEach(function(img){
+    img.addEventListener('click',function(){ c.innerHTML='<img src="'+img.src+'">'; lb.classList.add('on'); });
+  });
+  document.querySelectorAll('.shr-vid').forEach(function(row){
+    row.addEventListener('click',function(){
+      c.innerHTML='<iframe src="'+row.getAttribute('data-embed')+'" allow="autoplay; fullscreen" allowfullscreen></iframe>';
+      lb.classList.add('on');
+    });
+  });
+})();
+<\/script></body></html>`;
+  const blob=new Blob([html],{type:'text/html'});
+  const aEl=document.createElement('a'); aEl.href=URL.createObjectURL(blob);
+  aEl.download=((state.meta.refNo||'דוח')+'').replace(/[\/\\:]+/g,'-')+'.html'; aEl.click();
+  setTimeout(()=>URL.revokeObjectURL(aEl.href),3000);
+  setStat('דף-השיתוף ירד — שלח את הקובץ ללקוח');
+}
+
 function importReport(){ const jp=document.getElementById('jsonPick');
   jp.onchange=async()=>{ const f=jp.files[0]; jp.value=''; if(!f)return;
     try{ const data=JSON.parse(await f.text()); const st=data.state; if(!st||!st.meta)throw 0;
@@ -1136,7 +1312,12 @@ document.getElementById('libClose').onclick=closeLibrary;
 /* toolbar */
 document.getElementById('btnLibrary').onclick=openLibrary;
 document.getElementById('btnAI').onclick=openKeyDialog;
+// v0.4 — target קבוע: אם אור-בגג כבר פתוחה בלשונית בשם הזה, הדפדפן עובר אליה במקום
+// לפתוח עותק שני. save() לפני המעבר — שהדוח ייקלט לגיבוי מיד כשאור נוחת שם.
+document.getElementById('btnBackToApp').onclick=()=>{ try{ save(); }catch(e){}
+  window.open('https://orperias-coder.github.io/Or-BaGag/', 'orBagagApp'); };
 document.getElementById('btnPrint').onclick=()=>window.print();
+document.getElementById('btnShareWeb').onclick=()=>{ shareAsWebPage().catch(e=>{ console.warn(e); setStat('שגיאה בבניית דף-השיתוף'); }); };
 document.getElementById('btnPreview').onclick=()=>{ document.body.classList.toggle('preview');
   document.getElementById('btnPreview').textContent=document.body.classList.contains('preview')?'חזרה לעריכה':'תצוגה מקדימה'; };
 document.getElementById('btnNew').onclick=newReport;
