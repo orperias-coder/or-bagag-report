@@ -118,6 +118,10 @@ select.ed{appearance:auto;background:rgba(196,148,26,.07);border:1px solid var(-
 
 /* ---------- photos ---------- */
 .photos{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
+/* v0.9 — הפרדת הנספח בדוח-המשך: תיעוד מהדוח הקודם מול תיעוד אחרי הביצוע */
+.ph-group + .ph-group{margin-top:20px;padding-top:15px;border-top:1px solid var(--hairline-2)}
+.ph-group-h{font-family:var(--serif);font-weight:900;color:var(--terra-d);font-size:15.5px;margin-bottom:1px}
+.ph-group-n{font-family:var(--sans);font-size:11.5px;color:var(--ink3)}
 .ph{width:148px;border:1px solid var(--hairline);border-radius:10px;overflow:hidden;background:#fff;box-shadow:var(--sh-2)}
 .ph img{width:100%;height:104px;object-fit:cover;display:block;background:var(--stone)}
 .ph .pmeta{padding:5px 7px}
@@ -1131,17 +1135,31 @@ function render(){
     <div class="card">${gr}<div class="addbar edit-only"><button class="mini" data-action="addGenRec">+ הוסף המלצה</button></div></div>`});
 
   /* photo appendix */
-  let app='<div class="photos">';let any=false;
+  let any=false;
+  const cellsPrev=[], cellsAfter=[];
   // v0.7 — אור: "בארכיון התמונות שבסוף הדוח לא מופיעות כל התמונות שהעליתי." הנספח אסף
   // רק תמונות-גג ותמונות-ממצא; תמונות ה"אחרי ביצוע" של דוח-המשך (fu.photos) ממוספרות
   // ב-numberPhotos אבל לא נאספו כאן — חסרות בנספח, והמספור מדלג. עכשיו הן נכנסות מיד
   // אחרי תמונות ה"לפני" של אותו ממצא, באותו סדר כמו המספור.
-  state.roofs.forEach(r=>{ r.roofPhotos.forEach(p=>{any=true;app+=appendixCell(p,r.name,'מצב קיים');});
+  state.roofs.forEach(r=>{ r.roofPhotos.forEach(p=>{any=true;cellsPrev.push(appendixCell(p,r.name,'מצב קיים'));});
     r.findings.forEach((f,fi)=>{
-      f.photos.forEach(p=>{any=true;app+=appendixCell(p,r.name,'ממצא '+(fi+1)+' · '+(f.element||''));});
-      ((f.fu&&f.fu.photos)||[]).forEach(p=>{any=true;app+=appendixCell(p,r.name,'ממצא '+(fi+1)+' · אחרי ביצוע'+(f.element?' — '+f.element:''));});
+      f.photos.forEach(p=>{any=true;cellsPrev.push(appendixCell(p,r.name,'ממצא '+(fi+1)+' · '+(f.element||'')));});
+      ((f.fu&&f.fu.photos)||[]).forEach(p=>{any=true;cellsAfter.push(appendixCell(p,r.name,'ממצא '+(fi+1)+' · אחרי ביצוע'+(f.element?' — '+f.element:'')));});
     }); });
-  app+='</div>';
+  /* v0.9 — אור: "להפריד את התמונות של הדוח הקודם מהדוח הנוכחי בארכיון התמונות למטה".
+     בדוח-המשך הנספח נחלק לשתי קבוצות מסומנות. בדוח בדיקה רגיל אין תמונות "אחרי ביצוע"
+     בכלל, ולכן הוא נשאר רשת אחת רציפה בדיוק כמו קודם. */
+  let app;
+  if(cellsAfter.length){
+    app = `<div class="ph-group"><div class="ph-group-h">תיעוד מהדוח הקודם</div>`
+        + `<div class="ph-group-n">${cellsPrev.length} צילומים — המצב כפי שתועד בבדיקה</div>`
+        + `<div class="photos">${cellsPrev.join('')}</div></div>`
+        + `<div class="ph-group"><div class="ph-group-h">תיעוד אחרי ביצוע</div>`
+        + `<div class="ph-group-n">${cellsAfter.length} צילומים — המצב אחרי העבודות</div>`
+        + `<div class="photos">${cellsAfter.join('')}</div></div>`;
+  } else {
+    app = `<div class="photos">${cellsPrev.join('')}</div>`;
+  }
   const secApp=secWrap('appendix','נספח תיעוד צילומי',{eyebrow:'הוכחה',sub:'כל הצילומים בדוח, ממוספרים וממוקמים.',body:`
     <div class="card">${any?app:'<div class="hint">לא נוספו תמונות עדיין.</div>'}</div>`});
 
@@ -1485,6 +1503,12 @@ async function shareAsWebPage(){
 const SB2_URL='https://wxnmujdcrqsgokzlptkh.supabase.co';
 const SB2_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind4bm11amRjcnFzZ29remxwdGtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMDE3ODMsImV4cCI6MjA5NjU3Nzc4M30.R84NdsvQi5tMSJC51k4SxeVK364JQL1eZau0r9_V_ew';
 const VIEWER_URL='https://orperias-coder.github.io/or-bagag-report/view.html';
+/* v0.9 — אור: "הקישור ארוך ומגעיל". הקישור הישן = כתובת-הצפיין + כתובת-חתומה שלמה
+   מקודדת בתוכה, בערך 500 תווים. דלי ציבורי + קוד קצר נותן קישור ישיר לדף עצמו (~86 תווים).
+   אם הדלי לא קיים — הקוד נופל חזרה לשיטה הישנה, כך שהשיתוף אף פעם לא נשבר. */
+const SHARE_BUCKET='shared';
+function _mkShareCode(){ const a='abcdefghjkmnpqrstuvwxyz23456789'; let s='';
+  for(let i=0;i<7;i++) s+=a[Math.floor(Math.random()*a.length)]; return s; }
 let _sb2=null;
 function _sb2Client(){
   if(_sb2) return _sb2;
@@ -1504,21 +1528,43 @@ async function shareAsLink(){
   setStat('בונה ומעלה את הדוח…');
   try{
     const html=await buildSharePageHtml();
+    const blob=new Blob([html],{type:'text/html'});
     const uid2=session.user.id;
-    const objPath=uid2+'/reports-html/rpt-'+_activeId+'.html';
-    const up=await sb.storage.from('media').upload(objPath, new Blob([html],{type:'text/html'}), {upsert:true, contentType:'text/html'});
-    if(up.error) throw up.error;
-    // קישור קבוע: נוצר פעם אחת (תוקף 10 שנים) ונשמר על הדוח; העלאה חוזרת לאותו
-    // נתיב מעדכנת את מה שהקישור מציג.
-    let link=(state.meta&&state.meta.shareLink)||'';
-    // דוח משוכפל / דוח-המשך / מיובא יורש meta מהמקור — כולל shareLink של דוח אחר.
-    // הקישור תקף רק אם הוא מצביע על הנתיב של הדוח *הזה*; אחרת נוצר חדש.
-    if(link && link.indexOf('rpt-'+_activeId+'.html')===-1) link='';
+    let link='';
+
+    /* מסלול מועדף — דלי ציבורי + קוד קצר. הקוד נשמר על הדוח, כך שעדכון הדוח
+       מעלה לאותו נתיב והקישור שכבר שלחת ללקוח ממשיך להצביע על הגרסה העדכנית. */
+    /* דוח-המשך / משוכפל / מיובא יורש meta מהמקור — כולל shareCode. בלי הבדיקה הזו
+       שיתוף של הדוח החדש היה מעלה לנתיב של הדוח הישן ודורס את הדף שכבר נשלח ללקוח.
+       לכן הקוד תקף רק אם הוא נרשם עבור הדוח *הזה*. */
+    const codeOwned = state.meta && state.meta.shareCode && state.meta.shareCodeFor===_activeId;
+    const code = codeOwned ? state.meta.shareCode : _mkShareCode();
+    try{
+      const upS=await sb.storage.from(SHARE_BUCKET).upload('r/'+code+'.html', blob,
+                  {upsert:true, contentType:'text/html'});
+      if(!upS.error){
+        link=SB2_URL+'/storage/v1/object/public/'+SHARE_BUCKET+'/r/'+code+'.html';
+        state.meta.shareCode=code; state.meta.shareCodeFor=_activeId;
+        state.meta.shareLink=link; save();
+      }
+    }catch(e){ /* הדלי לא קיים או אין הרשאה — ממשיכים לשיטה הישנה */ }
+
     if(!link){
-      const sg=await sb.storage.from('media').createSignedUrl(objPath, 315360000);
-      if(sg.error||!sg.data||!sg.data.signedUrl) throw (sg.error||new Error('sign failed'));
-      link=VIEWER_URL+'#u='+encodeURIComponent(sg.data.signedUrl);
-      state.meta.shareLink=link; save();
+      const objPath=uid2+'/reports-html/rpt-'+_activeId+'.html';
+      const up=await sb.storage.from('media').upload(objPath, blob, {upsert:true, contentType:'text/html'});
+      if(up.error) throw up.error;
+      // קישור קבוע: נוצר פעם אחת (תוקף 10 שנים) ונשמר על הדוח; העלאה חוזרת לאותו
+      // נתיב מעדכנת את מה שהקישור מציג.
+      link=(state.meta&&state.meta.shareLink)||'';
+      // דוח משוכפל / דוח-המשך / מיובא יורש meta מהמקור — כולל shareLink של דוח אחר.
+      // הקישור תקף רק אם הוא מצביע על הנתיב של הדוח *הזה*; אחרת נוצר חדש.
+      if(link && link.indexOf('rpt-'+_activeId+'.html')===-1) link='';
+      if(!link){
+        const sg=await sb.storage.from('media').createSignedUrl(objPath, 315360000);
+        if(sg.error||!sg.data||!sg.data.signedUrl) throw (sg.error||new Error('sign failed'));
+        link=VIEWER_URL+'#u='+encodeURIComponent(sg.data.signedUrl);
+        state.meta.shareLink=link; save();
+      }
     }
     try{ await navigator.clipboard.writeText(link); }catch(e){}
     setStat('הקישור מוכן');
