@@ -162,6 +162,25 @@ body.preview select.ed{background:none;border:none;padding:0;appearance:none;fon
 body.preview .finding,body.preview .roof,body.preview .card{box-shadow:none}
 
 /* ---------- print ---------- */
+/* v0.3 (FOLLOWUP) — הציטוט מהדוח הראשון מול מה שנכתב עכשיו. שני הבלוקים מודפסים
+   (רק .edit-only נעלם בהדפסה), כי הלקוח צריך לראות את שניהם זה מול זה. */
+.ro-quote{background:transparent;border:0;padding:2px 0;color:var(--ink)}
+.ro-quote.ro-empty{color:var(--ink3);font-style:italic}
+.fu-finding{border-inline-start:3px solid var(--stone-d)}
+.fu-finding.fu-done{border-inline-start-color:#6b8f6b}
+.fu-finding.fu-partial{border-inline-start-color:#cf8f18}
+.fu-finding.fu-notdone{border-inline-start-color:#a64030}
+.fu-orig{background:rgba(0,0,0,.025);border:1px solid var(--stone-d);border-radius:10px;
+  padding:10px 12px;margin:8px 0}
+.fu-orig-tag,.fu-now-tag{font-size:10.5px;font-weight:800;letter-spacing:.4px;
+  text-transform:uppercase;color:var(--ink3);margin-bottom:6px}
+.fu-orig-sev{font-size:12px;color:var(--ink3);margin-top:6px}
+.fu-now{border:1.5px solid var(--gold,#c8a24a);border-radius:10px;padding:10px 12px;margin:8px 0}
+.fu-now-tag{color:var(--gold-d,#8a6524)}
+.fu-ref{font-size:13px;line-height:1.6;color:var(--ink2);margin-bottom:10px}
+.libfu-tag{display:inline-block;background:var(--stone-d);color:var(--ink2);font-size:10px;
+  font-weight:800;border-radius:999px;padding:1px 7px;vertical-align:1px}
+
 @media print{
   body{background:#fff}
   .no-print{display:none!important}
@@ -359,6 +378,16 @@ const SEV={
   future:{l:'לתיקון עתידי',c:'#e8a82c'},
   ok:{l:'תקין',c:'#6b8f6b'}
 };
+// v0.3 (FOLLOWUP) — אור: "כתבתי דוח ראשון, עכשיו אני רוצה להתייחס לממצאים שכתבתי בדוח
+// הראשון אבל לאחר ביצוע, לפי סעיפים." דוח-המשך הוא **מסמך נפרד** שנוצר מהראשון (הראשון
+// כבר נשלח ללקוח ואסור שישתנה), והממצאים עוברים אליו כציטוט קפוא + שכבת "אחרי ביצוע".
+const FU={
+  done:    {l:'בוצע',           c:'#6b8f6b'},
+  partial: {l:'בוצע חלקית',     c:'#cf8f18'},
+  notdone: {l:'לא בוצע',        c:'#a64030'},
+  na:      {l:'לא נדרש ביצוע',  c:'#8a8378'},
+  open:    {l:'טרם נבדק',       c:'#b9b2a6'}
+};
 const SEV_MEAN={
   immediate:'סכנה בטיחותית או נזק פעיל מתקדם — נזילה פעילה, סכנת קריסה/חשמל. לטיפול תוך ימים.',
   major:'ליקוי משמעותי שיחמיר אם יוזנח ועלול לפגוע בערך הנכס. לטיפול תוך 30-90 יום.',
@@ -539,7 +568,8 @@ function docKey(id){ return 'obDoc_'+id; }
 function loadDoc(id){ try{ return JSON.parse(localStorage.getItem(docKey(id))); }catch(e){ return null; } }
 function newReportId(){ return 'rep_'+Date.now().toString(36)+'_'+Math.floor(Math.random()*1e6).toString(36); }
 function docMeta(id,st){ st=st||{meta:{}}; const m=st.meta||{};
-  return { id, title:((m.siteAddress||m.title||'דוח ללא שם')+'').trim()||'דוח ללא שם', refNo:m.refNo||'',
+  return { id, isFollowUp: !!(st.followUp && st.followUp.of),   // v0.3 (FOLLOWUP) — לתגית בספרייה
+    title:((m.siteAddress||m.title||'דוח ללא שם')+'').trim()||'דוח ללא שם', refNo:m.refNo||'',
     address:m.siteAddress||'', client:m.clientName||'', roofs:(st.roofs||[]).length,
     findings:(st.roofs||[]).reduce((a,r)=>a+(r.findings||[]).length,0), updatedAt:Date.now() }; }
 function scheduleSave(){ setStat('שומר…'); clearTimeout(_saveT); _saveT=setTimeout(save,350); }
@@ -555,7 +585,17 @@ function setStat(t){ const e=document.getElementById('savestat'); if(e)e.textCon
 function ensureShape(){ if(!state.meta)state.meta={}; if(!state.roofs)state.roofs=[];
   if(!state.generalRecs||!state.generalRecs.length)state.generalRecs=[''];
   if(!state.disclaimers)state.disclaimers=DEFAULT_DISCLAIMERS.slice();
-  if(!state.sections||typeof state.sections!=='object')state.sections={}; }
+  if(!state.sections||typeof state.sections!=='object')state.sections={};
+  // v0.3 (FOLLOWUP) — `fu` נוצר **רק** בדוח-המשך. דוח בדיקה רגיל נשאר בלי השדה בכלל,
+  // כדי שמסמכים קיימים לא יגדלו ולא ישתנו בכלל ע"י השדרוג הזה.
+  if(isFollowUp()){
+    state.roofs.forEach(r => (r.findings||[]).forEach(f => {
+      if(!f.fu || typeof f.fu !== 'object') f.fu = { status:'open', done:'', photos:[] };
+      if(!Array.isArray(f.fu.photos)) f.fu.photos = [];
+      if(!FU[f.fu.status]) f.fu.status = 'open';
+    }));
+  } }
+function isFollowUp(){ return !!(state && state.followUp && state.followUp.of); }
 
 /* ============================================================ path helpers */
 function getPath(o,p){return p.split('.').reduce((a,k)=>a==null?a:a[k],o);}
@@ -566,6 +606,25 @@ function findFinding(r,id){return r.findings.find(f=>f.id===id);}
 
 /* ============================================================ render fragments */
 function ed(path, ph, cls){ const v=getPath(state,path); return `<div class="ed ${cls||''}" contenteditable="true" data-path="${path}" data-ph="${esc(ph||'')}">${esc(v)}</div>`; }
+// v0.3 (FOLLOWUP) — התאום הקריא-בלבד של ed(). בדוח-המשך הממצא המקורי הוא **ציטוט** של
+// מה שנשלח ללקוח; אם אור יוכל לערוך אותו כאן, דוח-ההמשך יצטט לא-נכון את הדוח הראשון.
+// contenteditable מוסר לגמרי (לא disabled) — כך גם הדפסה יוצאת זהה.
+function ro(path, emptyText){
+  const v = getPath(state, path);
+  const t = (v == null ? '' : String(v)).trim();
+  return t ? `<div class="ed ro-quote">${esc(t)}</div>`
+           : `<div class="ed ro-quote ro-empty edit-only">${esc(emptyText || '— לא נרשם בדוח הראשון —')}</div>`;
+}
+function selFu(path, cur){
+  let o=''; Object.keys(FU).forEach(k => o += `<option value="${k}" ${k===cur?'selected':''}>${esc(FU[k].l)}</option>`);
+  return `<select class="ed sevsel" data-path="${path}">${o}</select>`;
+}
+function fuBadge(k){ const x=FU[k]||FU.open; return `<span class="badge" style="background:${x.c}"><span class="dot" style="background:#fff"></span>${esc(x.l)}</span>`; }
+function countFu(){
+  const c={done:0,partial:0,notdone:0,na:0,open:0};
+  state.roofs.forEach(r => (r.findings||[]).forEach(f => { const k=(f.fu&&f.fu.status)||'open'; if(c[k]!=null)c[k]++; }));
+  return c;
+}
 function mrow(lbl,path,ph){ return `<div class="mrow"><div class="lbl">${lbl}</div><div class="val">${ed(path,ph)}</div></div>`; }
 function charrow(lbl,roofId,key,ph){ return `<div class="charrow"><div class="lbl">${lbl}</div><div class="val">${ed('roofs.'+roofIdx(roofId)+'.chars.'+key,ph)}</div></div>`; }
 function roofIdx(id){return state.roofs.findIndex(r=>r.id===id);}
@@ -606,6 +665,7 @@ function photoStrip(list, addAction, addAttrs){
 function renderFinding(roof, f, n){
   const i=roofIdx(roof.id); const j=roof.findings.indexOf(f);
   const base='roofs.'+i+'.findings.'+j+'.';
+  if(isFollowUp()) return renderFindingFollowUp(roof, f, n, base);
   return `<div class="finding">
     <div class="finding-head">
       <span class="fnum">${n}</span>
@@ -622,6 +682,39 @@ function renderFinding(roof, f, n){
     <div class="flabel">דחיפות</div>${ed(base+'urgency','מתי לבצע…')}
     ${photoStrip(f.photos, 'addFindingPhoto', `data-roof="${roof.id}" data-finding="${f.id}"`)}
     <div class="addbar edit-only"><button class="mini del" data-action="delFinding" data-roof="${roof.id}" data-finding="${f.id}">מחק ממצא</button></div>
+  </div>`;
+}
+
+// v0.3 (FOLLOWUP) — אותו ממצא, אחרי ביצוע. החלק העליון הוא ציטוט קפוא מהדוח הראשון
+// (ro(), בלי contenteditable), והחלק התחתון הוא מה שאור כותב עכשיו. סעיף-ממצא אחד
+// לכל סעיף מהדוח המקורי — בדיוק "לפי סעיפים".
+function renderFindingFollowUp(roof, f, n, base){
+  const fu = f.fu || { status:'open', done:'', photos:[] };
+  const st = FU[fu.status] ? fu.status : 'open';
+  return `<div class="finding fu-finding fu-${st}">
+    <div class="finding-head">
+      <span class="fnum">${n}</span>
+      <div class="fhgrow"><div class="ed ro-quote big">${esc(f.element||'(ללא שם אלמנט)')}</div></div>
+      ${fuBadge(st)}
+    </div>
+
+    <div class="fu-orig">
+      <div class="fu-orig-tag">מהדוח הראשון${state.followUp && state.followUp.refNo ? ' · ' + esc(state.followUp.refNo) : ''}</div>
+      <div class="flabel">מיקום מדויק</div>${ro(base+'location')}
+      <div class="flabel">הממצא שנרשם אז</div>${ro(base+'description')}
+      <div class="flabel">ההמלצה שניתנה</div>${ro(base+'recommendation')}
+      <div class="fu-orig-sev">דירוג בדוח הראשון: ${badge(f.severity)}</div>
+      ${f.photos && f.photos.length ? `<div class="flabel">תמונות מהבדיקה הראשונה</div>
+        <div class="photos">${f.photos.map(photoCell).join('')}</div>` : ''}
+    </div>
+
+    <div class="fu-now">
+      <div class="fu-now-tag">אחרי ביצוע</div>
+      <div class="flabel edit-only">מה מצב הסעיף</div>
+      <div class="edit-only">${selFu(base+'fu.status', st)}</div>
+      <div class="flabel">מה בוצע בפועל</div>${ed(base+'fu.done','מה נעשה, איך, ובמה — ומה נשאר פתוח אם נשאר…')}
+      ${photoStrip(fu.photos, 'addFuPhoto', `data-roof="${roof.id}" data-finding="${f.id}"`)}
+    </div>
   </div>`;
 }
 
@@ -717,6 +810,26 @@ function render(){
   ['immediate','major','future','ok'].forEach(k=>chips+=`<div class="chip"><span class="dot" style="background:${SEV[k].c}"></span><span class="cnt">${c[k]}</span> ${esc(SEV[k].l)}</div>`);
   chips+='</div>';
 
+  // v0.3 (FOLLOWUP) — הסעיף הראשון בדוח-המשך: מה קרה לכל הסעיפים, במספרים. נבנה מאותו
+  // דפוס .chip של תקציר-החומרה, ומוצג רק בדוח-המשך.
+  let secFu='';
+  if(isFollowUp()){
+    const fc=countFu();
+    let fchips='<div class="chips">';
+    ['done','partial','notdone','na','open'].forEach(k=>{ if(fc[k]) fchips+=`<div class="chip"><span class="dot" style="background:${FU[k].c}"></span><span class="cnt">${fc[k]}</span> ${esc(FU[k].l)}</div>`; });
+    fchips+='</div>';
+    const fu=state.followUp||{};
+    const link=[fu.refNo?('מס׳ '+esc(fu.refNo)):'', fu.date?('מתאריך '+esc(fu.date)):''].filter(Boolean).join(' · ');
+    secFu=secWrap('followup','מעקב ביצוע — סיכום',{eyebrow:'דוח המשך',gold:true,body:`
+      <div class="card">
+        <div class="fu-ref">דוח זה הוא דוח המשך לדוח הבדיקה${link?' '+link:''}${fu.title?' — '+esc(fu.title):''}.
+          כל סעיף למטה מצטט את הממצאים וההמלצות כפי שנרשמו אז, ומדווח מה בוצע בפועל.</div>
+        <div class="flabel">תאריך ביקור המעקב</div>${ed('meta.visitDate','')}
+        <div class="flabel">סיכום המעקב</div>${ed('followUp.note','מה נסגר, מה נשאר פתוח, ומה ההמלצה מכאן…','big')}
+        ${fchips}
+      </div>`});
+  }
+
   const secSummary=secWrap('summary','תקציר מנהלים',{eyebrow:'סקירה',gold:true,body:`
     <div class="card">
       <div class="flabel">מצב כללי</div>${ed('summary.generalState','תקין / טעון תיקון / קריטי')}
@@ -791,7 +904,7 @@ function render(){
     </div>`});
 
   document.getElementById('doc').innerHTML =
-    cover+secSummary+secScope+secMethod+secAsFound+secRoofs+secSeverity+secGen+secApp+secDisc;
+    cover+secFu+secSummary+secScope+secMethod+secAsFound+secRoofs+secSeverity+secGen+secApp+secDisc;   // v0.3 (FOLLOWUP) — secFu ריק בדוח רגיל
 
   updateFooter();
 }
@@ -801,7 +914,10 @@ function appendixCell(p,roof,where){
 }
 function numberPhotos(){ let n=0;const map={};
   state.roofs.forEach(r=>{ r.roofPhotos.forEach(p=>map[p.key]='P-'+String(++n).padStart(2,'0'));
-    r.findings.forEach(f=>f.photos.forEach(p=>map[p.key]='P-'+String(++n).padStart(2,'0'))); });
+    r.findings.forEach(f=>{ f.photos.forEach(p=>map[p.key]='P-'+String(++n).padStart(2,'0'));
+      // v0.3 (FOLLOWUP) — תמונות ה"אחרי" ממוספרות מיד אחרי תמונות ה"לפני" של אותו ממצא,
+      // כדי שההפניות בדוח יקראו בסדר הנכון ולא יקבלו מספרים מקריים בסוף.
+      ((f.fu&&f.fu.photos)||[]).forEach(p=>map[p.key]='P-'+String(++n).padStart(2,'0')); }); });
   return map; }
 function updateFooter(){ document.getElementById('printFooter').textContent =
   'אור בגג · '+(state.meta.refNo||'')+' · '+(state.meta.consultantEmail||'')+(state.meta.consultantPhone?(' · '+state.meta.consultantPhone):''); }
@@ -835,9 +951,10 @@ doc.addEventListener('click',e=>{
   else if(a==='delRoof'){ if(confirm('למחוק את הגג וכל הממצאים שבו?')){ const r=findRoof(b.dataset.roof); purgeRoofPhotos(r); state.roofs=state.roofs.filter(x=>x.id!==b.dataset.roof); save(); render(); } }
   else if(a==='addBlankFinding'){ addFinding(b.dataset.roof,'blank'); }
   else if(a==='openCatalog'){ openCatalog(b.dataset.roof); }
-  else if(a==='delFinding'){ if(confirm('למחוק ממצא זה?')){ const r=findRoof(b.dataset.roof); const f=findFinding(r,b.dataset.finding); if(f)f.photos.forEach(p=>removePhoto(p.key)); r.findings=r.findings.filter(x=>x.id!==b.dataset.finding); save(); render(); } }
+  else if(a==='delFinding'){ if(confirm('למחוק ממצא זה?')){ const r=findRoof(b.dataset.roof); const f=findFinding(r,b.dataset.finding); if(f){f.photos.forEach(p=>removePhoto(p.key)); ((f.fu&&f.fu.photos)||[]).forEach(p=>removePhoto(p.key));}   /* v0.3 (FOLLOWUP) — אחרת תמונות ה"אחרי" נשארות ב-IDB */ r.findings=r.findings.filter(x=>x.id!==b.dataset.finding); save(); render(); } }
   else if(a==='addRoofPhoto'){ _photoTarget={type:'roof',roof:b.dataset.roof}; pickPhotos(); }
   else if(a==='addFindingPhoto'){ _photoTarget={type:'finding',roof:b.dataset.roof,finding:b.dataset.finding}; pickPhotos(); }
+  else if(a==='addFuPhoto'){ _photoTarget={type:'fu',roof:b.dataset.roof,finding:b.dataset.finding}; pickPhotos(); }   // v0.3 (FOLLOWUP)
   else if(a==='openSketch'){ _sketchTarget = b.dataset.finding ? {type:'finding',roof:b.dataset.roof,finding:b.dataset.finding} : {type:'roof',roof:b.dataset.roof}; openSketch(); }
   else if(a==='addCover'){ _photoTarget={type:'cover'}; pickPhotos(true); }
   else if(a==='delCover'){ removePhoto(state.meta.coverPhoto); state.meta.coverPhoto=null; save(); render(); }
@@ -859,7 +976,8 @@ function addFinding(roofId, kind){
 function findPhotoByKey(key){
   if(state.meta.coverPhoto===key)return null;
   for(const r of state.roofs){ const a=r.roofPhotos.find(p=>p.key===key); if(a)return a;
-    for(const f of r.findings){ const b=f.photos.find(p=>p.key===key); if(b)return b; } }
+    for(const f of r.findings){ const b=f.photos.find(p=>p.key===key); if(b)return b;
+      const c=((f.fu&&f.fu.photos)||[]).find(p=>p.key===key); if(c)return c; } }   // v0.3 (FOLLOWUP)
   return null;
 }
 function pickPhotos(single){ const fp=document.getElementById('filePick'); fp.multiple=!single;
@@ -871,6 +989,10 @@ function onPhotos(files){
     if(t.type==='cover'){ if(state.meta.coverPhoto)removePhoto(state.meta.coverPhoto); state.meta.coverPhoto=key; }
     else if(t.type==='roof'){ findRoof(t.roof).roofPhotos.push({key,caption:''}); }
     else if(t.type==='finding'){ const r=findRoof(t.roof); findFinding(r,t.finding).photos.push({key,caption:''}); }
+    else if(t.type==='fu'){   // v0.3 (FOLLOWUP) — תמונת "אחרי ביצוע"
+      const r=findRoof(t.roof); const f=findFinding(r,t.finding);
+      if(f){ if(!f.fu) f.fu={status:'open',done:'',photos:[]}; if(!Array.isArray(f.fu.photos)) f.fu.photos=[];
+             f.fu.photos.push({key,caption:''}); } }
   });
   _photoTarget=null; save(); render();
 }
@@ -878,7 +1000,9 @@ function removePhoto(key){ if(!key)return; const u=purls.get(key); if(u)URL.revo
 function deletePhotoEverywhere(key){
   const entry=findPhotoByKey(key); if(entry&&entry.srcKey)removePhoto(entry.srcKey);
   if(state.meta.coverPhoto===key)state.meta.coverPhoto=null;
-  state.roofs.forEach(r=>{ r.roofPhotos=r.roofPhotos.filter(p=>p.key!==key); r.findings.forEach(f=>f.photos=f.photos.filter(p=>p.key!==key)); });
+  state.roofs.forEach(r=>{ r.roofPhotos=r.roofPhotos.filter(p=>p.key!==key);
+    r.findings.forEach(f=>{ f.photos=f.photos.filter(p=>p.key!==key);
+      if(f.fu&&Array.isArray(f.fu.photos)) f.fu.photos=f.fu.photos.filter(p=>p.key!==key); }); });   // v0.3 (FOLLOWUP)
   removePhoto(key);
 }
 function purgeRoofPhotos(r){ if(!r)return;
@@ -911,6 +1035,38 @@ async function duplicateReport(id){
   const lib=loadLib()||{reports:[]}; const m=docMeta(nid,copy); m.createdAt=Date.now(); lib.reports.unshift(m); saveLib(lib);
   renderLibrary();
 }
+// v0.3 (FOLLOWUP) — "דוח המשך" מהספרייה. בנוי על אותה מכניקה של duplicateReport, ובמכוון:
+// copyReportPhotos מעתיק את התמונות ל-namespace של המסמך החדש (המפתחות הם `<reportId>::<key>`),
+// ולכן מחיקת הדוח הראשון **לא** תרוקן את דוח-ההמשך מהתמונות שהוא מצטט — deleteReport מוחק
+// לפי namespace. הדוח הראשון עצמו לא נוגעים בו בכלל: הוא כבר נשלח ללקוח.
+async function startFollowUp(id){
+  const src = loadDoc(id); if(!src){ alert('הדוח לא נמצא'); return; }
+  const dup = JSON.parse(JSON.stringify(src));
+  dup.meta = dup.meta || {};
+  const srcRef = (src.meta && src.meta.refNo) || '';
+  // הקישור לדוח הראשון — נשמר גם כ-id (לניווט) וגם כטקסט (שיודפס גם אם הדוח הראשון נמחק)
+  dup.followUp = { of:id, refNo:srcRef, title:(src.meta&&src.meta.title)||'',
+                   date:(src.meta&&src.meta.visitDate)||'', createdAt:Date.now() };
+  dup.meta.title = 'דוח המשך — מעקב ביצוע';
+  dup.meta.refNo = srcRef ? (srcRef + '-מ') : '';
+  dup.meta.visitDate = '';                       // ביקור המעקב הוא תאריך אחר; אור ימלא
+  // הטקסטים הכלליים של הדוח הראשון לא מתאימים למעקב — מתרוקנים כדי שייכתבו מחדש,
+  // אבל **הממצאים נשארים במלואם**, כי הם כל העניין: הם הסעיפים שעליהם מדווחים.
+  if(dup.summary) dup.summary.generalState = '';
+  if(dup.scope)   dup.scope.reason = '';
+  (dup.roofs||[]).forEach(r => (r.findings||[]).forEach(f => {
+    delete f.demo;
+    f.fu = { status:'open', done:'', photos:[] };
+  }));
+  const nid = newReportId();
+  await copyReportPhotos(id, nid);
+  localStorage.setItem(docKey(nid), JSON.stringify(dup));
+  const lib = loadLib() || { reports:[] };
+  const m = docMeta(nid, dup); m.createdAt = Date.now(); lib.reports.unshift(m); saveLib(lib);
+  await switchTo(nid);                            // נפתח מיד — זה מה שאור בא לעשות
+  closeLibrary();
+}
+
 async function deleteReport(id){
   if(!confirm('למחוק את הדוח לצמיתות? (כולל התמונות שלו)'))return;
   await idbDeleteReport(id); try{ localStorage.removeItem(docKey(id)); localStorage.removeItem('obUp_'+id); }catch(e){}
@@ -947,13 +1103,14 @@ function libCard(r){
   const active=r.id===_activeId;
   return `<div class="libcard${active?' active':''}">
     <div class="libcard-main" data-libopen="${r.id}">
-      <div class="libcard-title">${esc(r.title||'דוח ללא שם')}${active?' <span class="libnow">נוכחי</span>':''}</div>
+      <div class="libcard-title">${r.isFollowUp?'<span class="libfu-tag">המשך</span> ':''}${esc(r.title||'דוח ללא שם')}${active?' <span class="libnow">נוכחי</span>':''}</div>
       <div class="libcard-sub">${esc([r.refNo,r.client].filter(Boolean).join(' · '))}</div>
       <div class="libcard-meta">${r.roofs||0} גגות · ${r.findings||0} ממצאים · עודכן ${when}</div>
     </div>
     <div class="libcard-actions">
       <button class="mini" data-libopen="${r.id}">פתח</button>
       <button class="mini" data-libdup="${r.id}">שכפל</button>
+      <button class="mini" data-libfu="${r.id}" title="דוח מעקב שמתייחס לממצאים של הדוח הזה, סעיף-סעיף">דוח המשך</button>
       <button class="mini" data-libexport="${r.id}">ייצא</button>
       <button class="mini del" data-libdel="${r.id}">מחק</button>
     </div></div>`;
@@ -966,8 +1123,9 @@ function closeLibrary(){ const m=document.getElementById('libModal'); if(m)m.cla
 
 document.getElementById('libModal').addEventListener('click',e=>{
   if(e.target.id==='libModal'){ closeLibrary(); return; }
-  const t=e.target.closest('[data-libopen],[data-libdup],[data-libexport],[data-libdel]'); if(!t)return;
+  const t=e.target.closest('[data-libopen],[data-libdup],[data-libfu],[data-libexport],[data-libdel]'); if(!t)return;
   if(t.dataset.libopen!=null) openReport(t.dataset.libopen);
+  else if(t.dataset.libfu!=null) startFollowUp(t.dataset.libfu);   // v0.3 (FOLLOWUP)
   else if(t.dataset.libdup!=null) duplicateReport(t.dataset.libdup);
   else if(t.dataset.libexport!=null) exportReport(t.dataset.libexport);
   else if(t.dataset.libdel!=null) deleteReport(t.dataset.libdel);
