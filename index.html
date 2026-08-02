@@ -612,10 +612,28 @@ function seedRoof(name, withDemo){
 
 /* ============================================================ IndexedDB (photos) */
 let _db=null;
-function idb(){return new Promise((res,rej)=>{ if(_db)return res(_db);
+// v0.2 (תיקון COLLAB #80) — במצב קריאה-בלבד חסמתי רק את localStorage, וה-IndexedDB נשאר
+// חשוף: ייבוא JSON כתב blob יתום דרך idbSetFor לפני שהמסלול נכשל. גם כאן הלקח זהה —
+// חוסמים בנקודת-חנק אחת (`transaction(...,'readwrite')`) ולא רודפים אחרי call-sites,
+// כי בדיוק המרדף הזה החטיא פעמיים.
+function _guardDb(db){
+  if(!window.__obReadOnly) return db;
+  return new Proxy(db, {
+    get(t, prop){
+      if(prop === 'transaction') return function(store, mode){
+        if(window.__obReadOnly && mode === 'readwrite')
+          throw new Error('read-only session — IDB mutation blocked');
+        return t.transaction(store, mode);
+      };
+      const v = t[prop];
+      return typeof v === 'function' ? v.bind(t) : v;
+    }
+  });
+}
+function idb(){return new Promise((res,rej)=>{ if(_db)return res(_guardDb(_db));
   const r=indexedDB.open('obReportPhotos',1);
   r.onupgradeneeded=()=>r.result.createObjectStore('ph');
-  r.onsuccess=()=>{_db=r.result;res(_db);}; r.onerror=()=>rej(r.error); });}
+  r.onsuccess=()=>{_db=r.result;res(_guardDb(_db));}; r.onerror=()=>rej(r.error); });}
 /* photos are namespaced per report:  IDB key = "<reportId>::<photoKey>" */
 function idbSetFor(id,k,b){return idb().then(db=>new Promise((res,rej)=>{const t=db.transaction('ph','readwrite');t.objectStore('ph').put(b,id+'::'+k);t.oncomplete=res;t.onerror=()=>rej(t.error);}));}
 function idbGetFor(id,k){return idb().then(db=>new Promise((res,rej)=>{const t=db.transaction('ph','readonly');const q=t.objectStore('ph').get(id+'::'+k);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);}));}
@@ -704,7 +722,8 @@ function docMeta(id,st){ st=st||{meta:{}}; const m=st.meta||{};
     address:m.siteAddress||'', client:m.clientName||'', roofs:(st.roofs||[]).length,
     findings:(st.roofs||[]).reduce((a,r)=>a+(r.findings||[]).length,0), updatedAt:Date.now() }; }
 function scheduleSave(){ setStat('שומר…'); clearTimeout(_saveT); _saveT=setTimeout(save,350); }
-function save(){ try{
+function save(){ if(window.__obReadOnly) return;   // v0.2 (COLLAB #72) — סשן קריאה-בלבד: לא דורסים כלום
+  try{
     localStorage.setItem(docKey(_activeId), JSON.stringify(state));
     const lib=loadLib()||{activeId:_activeId,reports:[]}; lib.activeId=_activeId;
     const m=docMeta(_activeId,state); const i=lib.reports.findIndex(r=>r.id===_activeId);
@@ -1511,12 +1530,13 @@ function _mkShareCode(){ const a='abcdefghjkmnpqrstuvwxyz23456789'; let s='';
   for(let i=0;i<7;i++) s+=a[Math.floor(Math.random()*a.length)]; return s; }
 let _sb2=null;
 function _sb2Client(){
+  if(window.__obReadOnly){ _sb2=null; return null; }   // v0.2 (COLLAB #84)
   if(_sb2) return _sb2;
   if(!window.supabase||!window.supabase.createClient) return null;
   try{ _sb2=window.supabase.createClient(SB2_URL,SB2_ANON,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'obv_sb_auth'}}); }catch(e){}
   return _sb2;
 }
-async function shareAsLink(){
+async function shareAsLink(){ if(window.__obReadOnly) return;   /* v0.2 (COLLAB #86) — כשל-סגור: אפס כתיבות ענן/שיתוף */ 
   const sb=_sb2Client();
   if(!sb){ alert('ספריית הענן לא נטענה — בדוק חיבור לאינטרנט ורענן.'); return; }
   let session=null;
@@ -1898,7 +1918,8 @@ const SUPA_URL='https://azojpbraehirtgooxanp.supabase.co';
 const SUPA_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF6b2pwYnJhZWhpcnRnb294YW5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MDI3MzEsImV4cCI6MjA5NzM3ODczMX0.Q_4wjd-MMXAF3Hf7yQxW9iMUKzhIuWRJt-RUh4qQr_0';
 let sb=null,_user=null,_cloudPushT=null,_syncing=false;
 
-function initSupa(){ if(sb)return sb; if(!window.supabase||!window.supabase.createClient)return null;
+function initSupa(){ if(window.__obReadOnly){ sb=null; return null; }   // v0.2 (COLLAB #84) — כשל-סגור חוסם את הענן במפעל
+  if(sb)return sb; if(!window.supabase||!window.supabase.createClient)return null;
   try{ sb=window.supabase.createClient(SUPA_URL,SUPA_ANON,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}); }catch(e){ sb=null; }
   return sb; }
 function collectPhotoKeys(st){ const ks=[]; if(st&&st.meta&&st.meta.coverPhoto)ks.push(st.meta.coverPhoto);
@@ -1919,7 +1940,7 @@ async function cloudInit(){
   updateCloudUI();
   if(_user) cloudFullSync();
 }
-async function uploadReportPhotos(id,st){
+async function uploadReportPhotos(id,st){ if(window.__obReadOnly) return;   /* v0.2 (COLLAB #88) — כשל-סגור */ 
   const upKey='obUp_'+id; let uploaded; try{ uploaded=new Set(JSON.parse(localStorage.getItem(upKey)||'[]')); }catch(e){ uploaded=new Set(); }
   for(const k of collectPhotoKeys(st)){ if(uploaded.has(k))continue;
     let blob; try{ blob=await idbGetFor(id,k); }catch(e){} if(!blob)continue;
@@ -1927,22 +1948,22 @@ async function uploadReportPhotos(id,st){
   }
   try{ localStorage.setItem(upKey,JSON.stringify([...uploaded])); }catch(e){}
 }
-async function downloadReportPhotos(id,st){
+async function downloadReportPhotos(id,st){ if(window.__obReadOnly) return;   /* v0.2 (COLLAB #88) — כשל-סגור */ 
   for(const k of collectPhotoKeys(st)){ let ex; try{ ex=await idbGetFor(id,k); }catch(e){} if(ex)continue;
     try{ const {data,error}=await sb.storage.from('media').download(_user.id+'/'+id+'/'+k); if(!error&&data)await idbSetFor(id,k,data); }catch(e){}
   }
   const upKey='obUp_'+id; let up; try{ up=new Set(JSON.parse(localStorage.getItem(upKey)||'[]')); }catch(e){ up=new Set(); }
   collectPhotoKeys(st).forEach(k=>up.add(k)); try{ localStorage.setItem(upKey,JSON.stringify([...up])); }catch(e){}
 }
-async function cloudPushReport(id){
+async function cloudPushReport(id){ if(window.__obReadOnly) return;   /* v0.2 (COLLAB #86) — כשל-סגור: אפס כתיבות ענן/שיתוף */ 
   if(!sb||!_user||!id)return; const st=loadDoc(id); if(!st)return;
   await uploadReportPhotos(id,st);
   try{ const {data,error}=await sb.from('sync_records').upsert({user_id:_user.id,entity:'report',item_id:id,payload:st,deleted:false},{onConflict:'user_id,entity,item_id'}).select('updated_at').single();
     if(!error&&data){ const lib=loadLib()||{reports:[]}; const m=lib.reports.find(r=>r.id===id); if(m){ m.cloudAt=data.updated_at; saveLib(lib); } } }catch(e){}
 }
-async function cloudDeleteReport(id){ if(!sb||!_user)return;
+async function cloudDeleteReport(id){ if(window.__obReadOnly) return;   /* v0.2 (COLLAB #86) — כשל-סגור: אפס כתיבות ענן/שיתוף */ if(!sb||!_user)return;
   try{ await sb.from('sync_records').upsert({user_id:_user.id,entity:'report',item_id:id,payload:{},deleted:true},{onConflict:'user_id,entity,item_id'}); }catch(e){} }
-async function cloudPullAll(){
+async function cloudPullAll(){ if(window.__obReadOnly) return;   /* v0.2 (COLLAB #86) — כשל-סגור: אפס כתיבות ענן/שיתוף */ 
   if(!sb||!_user)return;
   let data,error; try{ ({data,error}=await sb.from('sync_records').select('item_id,payload,updated_at,deleted').eq('entity','report')); }catch(e){ return; }
   if(error||!data)return;
@@ -1965,15 +1986,15 @@ async function cloudPullAll(){
   }
   try{ if(typeof renderLibrary==='function' && document.getElementById('libModal').classList.contains('open'))renderLibrary(); }catch(e){}
 }
-async function catalogCloudPush(){ if(!sb||!_user)return;
+async function catalogCloudPush(){ if(window.__obReadOnly) return;   /* v0.2 (COLLAB #86) — כשל-סגור: אפס כתיבות ענן/שיתוף */ if(!sb||!_user)return;
   try{ await sb.from('sync_records').upsert({user_id:_user.id,entity:'catalog',item_id:'_singleton',payload:{items:getCatalog()},deleted:false},{onConflict:'user_id,entity,item_id'}); }catch(e){} }
-async function catalogCloudPull(){ if(!sb||!_user)return;
+async function catalogCloudPull(){ if(window.__obReadOnly) return;   /* v0.2 (COLLAB #88) — כשל-סגור */ if(!sb||!_user)return;
   try{ const {data,error}=await sb.from('sync_records').select('payload').eq('entity','catalog').eq('item_id','_singleton').maybeSingle();
     if(!error&&data&&data.payload&&Array.isArray(data.payload.items))mergeCatalog(data.payload.items); }catch(e){} }
 function mergeCatalog(remote){ const local=getCatalog(); const map=new Map(local.map(e=>[norm(e.element),e]));
   remote.forEach(e=>{ if(!e||!e.element)return; const k=norm(e.element); const ex=map.get(k); if(!ex||(e.ts||0)>(ex.ts||0))map.set(k,e); });
   saveCatalog([...map.values()].sort((a,b)=>(b.ts||0)-(a.ts||0))); }
-async function cloudFullSync(){
+async function cloudFullSync(){ if(window.__obReadOnly) return;   /* v0.2 (COLLAB #86) — כשל-סגור: אפס כתיבות ענן/שיתוף */ 
   if(!sb||!_user||_syncing)return; _syncing=true; cloudStatus('מסנכרן…');
   try{
     await cloudPullAll();
@@ -1995,7 +2016,7 @@ async function cloudSignInEmail(){ if(!initSupa())return; const email=((document
   try{ const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+location.pathname}});
     cloudStatus(error?('שגיאה: '+error.message):'נשלח קישור התחברות ל-'+email+'. פתח אותו מאותו מכשיר.'); }catch(e){ cloudStatus('שגיאה: '+(e.message||e)); }
 }
-async function cloudSignOut(){ if(!sb)return; try{ await sb.auth.signOut(); }catch(e){} _user=null; updateCloudUI(); cloudStatus('התנתקת'); }
+async function cloudSignOut(){ if(window.__obReadOnly) return;   /* v0.2 (COLLAB #88) — כשל-סגור */ if(!sb)return; try{ await sb.auth.signOut(); }catch(e){} _user=null; updateCloudUI(); cloudStatus('התנתקת'); }
 
 /* ============================================================ boot */
 async function loadActivePhotos(){
@@ -2013,11 +2034,98 @@ async function boot(){
   // ומשאיר את מה שאור הקליד מאחור.
   const _qp = new URLSearchParams(location.search);
   const _wantNew = _qp.get('new') === '1';
-  if(_wantNew){
+  // v0.2 (REPORT-OPEN) — פתיחת דוח **קיים** לפי מזהה. עד כה לא היה פרמטר כזה, ולכן כל שורה
+  // ברשימת-הדוחות באפליקציית הביקורים קראה openReportApp() בלי ארגומנטים ונחתה על הדוח
+  // האחרון שנערך או על מסך ריק — מה שנראה לאור כ"הדוחות ריקים" בשני המכשירים.
+  //   ?open=<reportId>   → פותח את אותו דוח בדיוק, אם הוא קיים בספרייה במכשיר הזה
+  // מזהה שאינו קיים כאן (למשל דוח שנכתב במכשיר אחר ולא הסתנכרן) אינו שובר כלום:
+  // נופלים להתנהגות הרגילה ומודיעים לאור מפורשות במקום להציג דוח אחר בשקט.
+  const _wantOpen = (_qp.get('open') || '').trim();
+  let _openMissing = false;
+
+  // v0.2 (תיקון COLLAB #82) — **כשל-סגור, במקום לרדוף אחרי mutators.**
+  // ארבעה סבבים ניסיתי להגן על "סשן קריאה-בלבד" שכן ממשיך לעלות: localStorage, ואז IDB,
+  // ואז התברר ש-migrateLegacyPhotos ומחיקת obReportV1 רצות **לפני** שהדגל עולה, ושיש
+  // שכבה שלישית לגמרי — Supabase (cloudInit/fullSync/push/delete/catalogPush).
+  // המסקנה: העיצוב היה שגוי. אפליקציה שאי-אפשר לשמור בה בבטחה **לא צריכה לעלות**.
+  // הבדיקה והגיבוי עוברים לכאן — לפני migration, לפני IDB, לפני הענן — וכשל עוצר את boot.
+  // v0.2 (COLLAB #84) — helper יחיד. גם כשל **קריאה** וגם כשל **גיבוי** נכנסים אליו.
+  const _failClosed = (why) => {
+    window.__obReadOnly = true;
+    try {
+      const _rs = Storage.prototype.setItem, _rr = Storage.prototype.removeItem;
+      Storage.prototype.setItem = function(k, v){
+        if(window.__obReadOnly && /^(obLib|obDoc_|obReportV1)/.test(String(k))) return;
+        return _rs.call(this, k, v);
+      };
+      Storage.prototype.removeItem = function(k){
+        if(window.__obReadOnly && /^(obLib|obDoc_|obReportV1)/.test(String(k))) return;
+        return _rr.call(this, k);
+      };
+    } catch(e){}
+    try { sb = null; _user = null; } catch(e){}
+    try { _sb2 = null; } catch(e){}
+    document.body.innerHTML =
+      '<div style="direction:rtl;font-family:-apple-system,Heebo,sans-serif;background:#f4f1ea;' +
+      'color:#2a1f12;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px">' +
+      '<div style="max-width:460px;text-align:center;line-height:1.7">' +
+      '<div style="font-size:19px;font-weight:700;margin-bottom:10px">האפליקציה נעצרה כדי לא לפגוע בנתונים</div>' +
+      '<div style="font-size:14px;color:#5b4f3f">' + why + '<br><br><b>שום מסמך לא נמחק ושום שינוי לא בוצע.</b><br>' +
+      'פנה מקום במכשיר ופתח שוב.</div></div></div>';
+  };
+
+  try {
+    const _rawLib0 = localStorage.getItem(LS_LIB);
+    if(_rawLib0){
+      let _parsed0 = null; try { _parsed0 = JSON.parse(_rawLib0); } catch(e){ _parsed0 = null; }
+      if(!(_parsed0 && Array.isArray(_parsed0.reports))){
+        let _ok = false;
+        try {
+          const _bk0 = LS_LIB + '_broken_' + Date.now();
+          localStorage.setItem(_bk0, _rawLib0);
+          _ok = (localStorage.getItem(_bk0) === _rawLib0);
+        } catch(e){ _ok = false; }
+        if(!_ok){
+          _failClosed('ספריית-הדוחות פגומה, וגם לא ניתן היה לשמור עותק לשחזור — ככל הנראה האחסון מלא.');
+          return;   // ← לא ממשיכים ל-migration, ל-IDB, לרינדור או ל-cloudInit
+        }
+      }
+    }
+  } catch(e){
+    // v0.2 (תיקון COLLAB #84) — **טעות היגיון שלי:** קודם כתבתי כאן "ממשיכים כרגיל, אין מה
+    // להגן עליו". זה הפוך. אם אי-אפשר אפילו **לקרוא** את האחסון, איני יכול לדעת אם יש מה
+    // להגן עליו — וזה בדיוק המצב שבו חייבים להיכשל סגור, לא להמשיך.
+    _failClosed('לא ניתן לקרוא את אחסון המכשיר, ולכן לא ניתן לוודא שהנתונים בטוחים.');
+    return;
+  }
+  if(_wantNew || _wantOpen){
     try{ history.replaceState(null, '', location.pathname + location.hash); }catch(e){}
   }
   const lib=loadLib();
-  if(_wantNew){
+  // v0.2 (תיקון COLLAB #57.ב) — לא מספיק שהמזהה קיים באינדקס. אם obDoc_<id> חסר או פגום
+  // (שחזור חלקי, מכסת localStorage, סנכרון שטרם הגיע), הגרסה הראשונה שלי עשתה
+  // loadDoc()||makeSeed() ואז save() בסוף boot — כלומר **יצרה דוח ריק ושמרה אותו תחת
+  // המזהה של הדוח האמיתי**, ודרסה גם את ה-metadata בספרייה. זו מחיקה, לא נפילה חיננית.
+  // עכשיו: המסמך עצמו חייב להיטען ולהיות אובייקט תקין; אחרת נכנסים ל-_openMissing,
+  // **לא נוגעים במזהה המבוקש כלל**, ונופלים להתנהגות הרגילה.
+  // v0.2 (תיקון COLLAB #62) — `typeof [] === 'object'` הוא true, ולכן `[]` עבר את הבדיקה
+  // הקודמת: המסמך נחשב תקין, נשארנו על המזהה, ו-save() דרס את ה-metadata. גם `{}` ו-
+  // `{meta:[],roofs:{}}` עברו. נדרש validator סמנטי.
+  // **התקדים לכלל נלקח מהאפליקציה עצמה:** rptMirrorIn עושה `if(!doc || !doc.meta) continue`
+  // — כלומר מסמך בלי meta כבר נחשב שם "מסמך חסר, לא ממציאים אחד". אותו רף בדיוק.
+  const _isReportDoc = d => !!d && typeof d === 'object' && !Array.isArray(d)
+                            && !!d.meta && typeof d.meta === 'object' && !Array.isArray(d.meta)
+                            && (d.roofs === undefined || Array.isArray(d.roofs));
+  const _openDoc = _wantOpen ? loadDoc(_wantOpen) : null;
+  const _libOk = !!(lib && Array.isArray(lib.reports));   // ספרייה בעלת shape פגום לא תפיל boot
+  const _hasOpen = !!(_wantOpen && _libOk && lib.reports.some(r => r && r.id === _wantOpen)
+                      && _isReportDoc(_openDoc));
+  if(_wantOpen && !_hasOpen) _openMissing = true;
+  if(!_wantNew && _hasOpen){
+    _activeId=_wantOpen;
+    state=_openDoc;
+    const _l=lib; _l.activeId=_wantOpen; saveLib(_l);
+  } else if(_wantNew){
     _activeId=newReportId(); state=makeSeedBlank();
     if(!state.meta) state.meta={};
     const _pre=(k,v)=>{ v=(v||'').trim(); if(v) state.meta[k]=v; };
@@ -2026,17 +2134,75 @@ async function boot(){
     _pre('siteAddress', _qp.get('address'));
     // save() בסוף boot רושם את הדוח בספרייה ושומר על אלה שכבר קיימים — לא saveLib ידני,
     // שהיה דורס את הרשימה (ראה הענף השלישי, שמותר לו לעשות זאת רק כשאין ספרייה בכלל).
-  } else if(lib && lib.reports && lib.reports.length){
-    _activeId=(lib.activeId && lib.reports.some(r=>r.id===lib.activeId))?lib.activeId:lib.reports[0].id;
-    state=loadDoc(_activeId)||makeSeed();
+  } else if(_libOk && lib.reports.length){
+    // v0.2 (תיקון COLLAB #65) — כשהפתיחה-לפי-מזהה נכשלה, ה-fallback חזר בדיוק למזהה הפגום
+    // אם הוא היה גם lib.activeId — **המצב הסביר ביותר**, כי זה הדוח שהיה פתוח ונעלם.
+    // התוצאה: נשארנו על ה-ID, makeSeed() רץ, ו-save() דרס את ה-metadata — כלומר ההבטחה
+    // שב-alert ("לא נוצר דוח חדש תחת המזהה שלו") הייתה שקרית בפועל.
+    // עכשיו: כשהמסמך המבוקש נכשל, ה-fallback נבחר **רק** מרשומות שהמזהה שלהן שונה
+    // מהמבוקש **ושהמסמך שלהן עובר את ה-validator**. אין מועמד תקין → דוח חדש עם מזהה
+    // חדש, לעולם לא תחת המזהה המבוקש.
+    if(_openMissing){
+      const _elig = lib.reports.filter(r => r && r.id && r.id !== _wantOpen && _isReportDoc(loadDoc(r.id)));
+      const _pick = (lib.activeId && _elig.some(r => r.id === lib.activeId))
+        ? lib.activeId : (_elig.length ? _elig[0].id : null);
+      if(_pick){ _activeId=_pick; state=loadDoc(_pick); }
+      else { _activeId=newReportId(); state=makeSeedBlank(); }
+    } else {
+      // מסלול העלייה הרגיל — ללא שינוי. (הערה: `loadDoc()||makeSeed()` על מסמך פעיל פגום
+      // הוא התנהגות שקדמה לשינוי הזה ואינה בהיקפו; מדווח ל-Codex ולא מתוקן בשקט.)
+      _activeId=(lib.activeId && lib.reports.some(r=>r.id===lib.activeId))?lib.activeId:lib.reports[0].id;
+      state=loadDoc(_activeId)||makeSeed();
+    }
   } else {
     _activeId=newReportId();
     let legacy=null; try{ legacy=localStorage.getItem('obReportV1'); }catch(e){}
     if(legacy){ try{ state=JSON.parse(legacy); }catch(e){ state=makeSeed(); } await migrateLegacyPhotos(_activeId); try{ localStorage.removeItem('obReportV1'); }catch(e){} }
     else { state=makeSeed(); }
-    saveLib({activeId:_activeId,reports:[]});
+    // v0.2 (תיקון COLLAB #68) — רגרסיה שהכנסתי: לפני `_libOk` ספרייה בעלת shape פגום
+    // הפילה את ה-boot; אחריו היא כבר לא מפילה — אבל הענף הזה **דרס אותה** ב-reports:[].
+    // מבחינת נתונים זה גרוע יותר מקריסה: המידע נעלם בלי שאיש ידע. עכשיו כל ספרייה קיימת
+    // שאינה תקינה נשמרת בצד לפני שכותבים חדשה, כך ששחזור ידני תמיד אפשרי.
+    // v0.2 (תיקון COLLAB #72) — הגיבוי-לצד היה ב-try/catch ריק, ו-saveLib רץ אחריו
+    // **בלי תלות בהצלחתו**. כשהאחסון מלא — בדיוק המצב שגורם לספרייה פגומה מלכתחילה —
+    // הגיבוי נכשל, המקור נדרס, ולא נשאר שום עותק. כשלון-גיבוי חייב לעצור הכל.
+    // v0.2 (תיקון כפילות שנוצרה ב-COLLAB #82) — הגיבוי כבר בוצע בשער-הכשל בראש boot.
+    // הבלוק הזה כתב גיבוי **שני** לאותה ספרייה (מפתחות שנבדלים במילישניות), וזו הייתה
+    // כפילות שלי, לא תקלת-בדיקה. כאן נשארת רק ההודעה לאור.
+    let _libSafe = true;
+    try {
+      const _rawLib = localStorage.getItem(LS_LIB);
+      if(_rawLib && !(lib && Array.isArray(lib.reports))){
+        setTimeout(function(){ try{ alert('ספריית-הדוחות הייתה פגומה ונשמרה בצד לשחזור ידני.\nנפתח דוח חדש; שום מסמך קיים לא נמחק.'); }catch(e){} }, 350);
+      }
+    } catch(e){
+      _libSafe = false;
+      // אין עותק → לא נוגעים במקור בכלל, והסשן הופך לקריאה-בלבד כדי ש-save() לא ידרוס
+      window.__obReadOnly = true;
+      // v0.2 (תיקון COLLAB #76) — guard ב-save() בלבד לא הספיק: saveLib() ונתיבי-UI נוספים
+      // כותבים ישירות. "לא בוצע שום שינוי" חייב להיות אמת בכל מסלול, ולכן חוסמים בנקודת
+      // החנק הנמוכה ביותר — כל כתיבה למפתחות שלנו. כך אין call-site שאפשר לפספס.
+      try {
+        const _realSet = Storage.prototype.setItem;
+        const _realRemove = Storage.prototype.removeItem;
+        Storage.prototype.setItem = function(k, v){
+          if(window.__obReadOnly && /^(obLib|obDoc_|obReportV1)/.test(String(k))) return;
+          return _realSet.call(this, k, v);
+        };
+        Storage.prototype.removeItem = function(k){
+          if(window.__obReadOnly && /^(obLib|obDoc_|obReportV1)/.test(String(k))) return;
+          return _realRemove.call(this, k);
+        };
+      } catch(e){}
+      setTimeout(function(){ try{ alert('ספריית-הדוחות פגומה, וגם לא ניתן היה לשמור עותק לשחזור — ככל הנראה האחסון מלא.\n\nלא בוצע שום שינוי, ושום מסמך לא נמחק. פנה מקום ונסה שוב.'); }catch(e){} }, 350);
+    }
+    if(_libSafe) saveLib({activeId:_activeId,reports:[]});
   }
   ensureShape(); syncUid();
+  if(_openMissing){
+    // לא שותקים ולא מציגים דוח אחר כאילו הוא המבוקש
+    setTimeout(function(){ try{ alert('הדוח המבוקש לא נמצא במכשיר הזה, או שתוכנו חסר.\nייתכן שהוא נכתב במכשיר אחר ועדיין לא הסתנכרן.\n\nלא נוצר דוח חדש תחת המזהה שלו — הוא ייפתח כשהתוכן יגיע.'); }catch(e){} }, 300);
+  }
   await loadActivePhotos();
   render(); save();
   cloudInit();
